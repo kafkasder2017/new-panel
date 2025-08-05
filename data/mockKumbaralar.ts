@@ -1,0 +1,52 @@
+import { Kumbara, KumbaraStatus, KumbaraType } from '../types';
+
+export const MOCK_KUMBARALAR: Kumbara[] = [
+    {
+        id: 1,
+        code: 'KMBR-IST-001',
+        location: 'KAFKASDER Genel Merkezi, Fatih, İstanbul',
+        lat: 41.0175,
+        lng: 28.9497,
+        type: KumbaraType.BAGIS,
+        status: KumbaraStatus.AKTIF,
+        lastEmptied: '2024-06-15',
+        balance: 1250.75,
+        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KMBR-IST-001',
+    },
+    {
+        id: 2,
+        code: 'KMBR-IST-002',
+        location: 'Yavuz Selim Camii, Fatih, İstanbul',
+        lat: 41.0255,
+        lng: 28.9519,
+        type: KumbaraType.BAGIS,
+        status: KumbaraStatus.AKTIF,
+        lastEmptied: '2024-07-01',
+        balance: 780.50,
+        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KMBR-IST-002',
+    },
+    {
+        id: 3,
+        code: 'KMBR-ANK-001',
+        location: 'Ankara Dernek Şubesi, Çankaya, Ankara',
+        lat: 39.9208,
+        lng: 32.8541,
+        type: KumbaraType.OZEL_AMAC,
+        status: KumbaraStatus.PASIF,
+        lastEmptied: '2024-05-20',
+        balance: 0,
+        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KMBR-ANK-001',
+    },
+     {
+        id: 4,
+        code: 'KMBR-IST-003',
+        location: 'Bağcılar Meydanı, İstanbul',
+        lat: 41.0351,
+        lng: 28.8252,
+        type: KumbaraType.BAGIS,
+        status: KumbaraStatus.AKTIF,
+        lastEmptied: '2024-07-05',
+        balance: 2150.00,
+        qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=KMBR-IST-003',
+    }
+];

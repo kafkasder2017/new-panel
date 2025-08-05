@@ -1,0 +1,13 @@
+{
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "name": "KAFKASDER Panel (Supabase Entegrasyonu)",
+  "description": "Dernek yönetim paneli, verilerini artık Supabase üzerinden yönetmektedir.",
+  "prompt": "",
+  "secrets": [
+    "API_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY"
+  ]
+}
