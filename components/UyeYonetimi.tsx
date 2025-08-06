@@ -5,6 +5,8 @@ import { getAidatlarByUyeId, createAidat, updateAidat } from '../services/apiSer
 import { useUyeYonetimi } from '../hooks/useData';
 import Modal from './Modal';
 import { PageHeader, Table, Input, Select, Button } from './ui';
+import AdvancedFilter from '../src/components/AdvancedFilter';
+import SmartSearch from '../src/components/SmartSearch';
 
 const getStatusClass = (status: PersonStatus) => {
     switch (status) {
@@ -23,24 +25,26 @@ const UyeYonetimi: React.FC = () => {
         statusFilter: 'all' as PersonStatus | 'all',
         typeFilter: 'all' as MembershipType | 'all',
     });
+    
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     const [selectedUye, setSelectedUye] = useState<Person | null>(null);
 
     const filteredUyeler = useMemo(() => {
         return uyeler.filter(uye => {
-            const fullName = `${uye.ad} ${uye.soyad}`.toLowerCase();
+            const fullName = `${uye.first_name} ${uye.last_name}`.toLowerCase();
             const matchesSearch = fullName.includes(filters.searchTerm.toLowerCase());
-            const matchesStatus = filters.statusFilter === 'all' || uye.durum === filters.statusFilter;
+            const matchesStatus = filters.statusFilter === 'all' || uye.status === filters.statusFilter;
             const matchesType = filters.typeFilter === 'all' || uye.membershipType === filters.typeFilter;
             return matchesSearch && matchesStatus && matchesType;
         });
     }, [uyeler, filters]);
     
     const columns = useMemo(() => [
-        { key: 'adSoyad', title: 'Ad Soyad', render: (value: any, u: Person) => `${u.ad} ${u.soyad}` },
+        { key: 'adSoyad', title: 'Ad Soyad', render: (value: any, u: Person) => `${u.first_name} ${u.last_name}` },
         { key: 'membershipType', title: 'Üyelik Tipi', render: (value: any, u: Person) => u.membershipType },
-        { key: 'kayitTarihi', title: 'Kayıt Tarihi', render: (value: any, u: Person) => new Date(u.kayitTarihi).toLocaleDateString('tr-TR')},
-        { key: 'durum', title: 'Durum', render: (value: any, u: Person) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(u.durum)}`}>{u.durum}</span>},
+        { key: 'kayitTarihi', title: 'Kayıt Tarihi', render: (value: any, u: Person) => new Date(u.registration_date).toLocaleDateString('tr-TR')},
+        { key: 'durum', title: 'Durum', render: (value: any, u: Person) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(u.status as PersonStatus)}`}>{u.status}</span>},
         { key: 'actions', title: 'İşlemler', render: (value: any, u: Person) => (
             <div className="text-right">
                 <Button variant="ghost" size="sm" onClick={() => setSelectedUye(u)}>Aidat Takibi</Button>
@@ -55,16 +59,49 @@ const UyeYonetimi: React.FC = () => {
         <>
             <PageHeader title="Üye Yönetimi" />
             <div className="bg-white dark:bg-zinc-800 p-4 sm:p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
+                {/* Akıllı Arama */}
+                <SmartSearch
+                    placeholder="Üye ara..."
+                    onSearch={(query) => setFilters(f => ({ ...f, searchTerm: query }))}
+                />
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <Input type="text" placeholder="Üye adı ile ara..." value={filters.searchTerm} onChange={e => setFilters(f=>({...f, searchTerm: e.target.value}))}/>
                     <Select value={filters.typeFilter} onChange={e => setFilters(f=>({...f, typeFilter: e.target.value as any}))} options={[
                         {value: 'all', label: 'Tüm Üyelik Tipleri'},
                         {value: MembershipType.STANDART, label: 'Standart'},
                         {value: MembershipType.ONURSAL, label: 'Onursal'},
                     ]} />
                     <Select value={filters.statusFilter} onChange={e => setFilters(f=>({...f, statusFilter: e.target.value as any}))} options={[{value: 'all', label: 'Tüm Durumlar'}, ...Object.values(PersonStatus).map(s => ({value:s, label: s}))]} />
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className="flex items-center gap-2"
+                    >
+                        Gelişmiş Filtreler
+                    </Button>
                 </div>
-                <Table columns={columns} data={filteredUyeler} />
+                
+                {/* Gelişmiş Filtreler */}
+                {showAdvancedFilters && (
+                    <AdvancedFilter
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                        filterOptions={[
+                            { key: 'status', label: 'Durum', type: 'select', options: [
+                                { value: 'aktif', label: 'Aktif' },
+                                { value: 'pasif', label: 'Pasif' }
+                            ]},
+                            { key: 'membershipType', label: 'Üyelik Türü', type: 'select', options: [
+                                { value: 'normal', label: 'Normal' },
+                                { value: 'onursal', label: 'Onursal' },
+                                { value: 'kurumsal', label: 'Kurumsal' }
+                            ]},
+                            { key: 'registrationDate', label: 'Kayıt Tarihi', type: 'dateRange' }
+                        ]}
+                    />
+                )}
+                
+                <Table<Person> columns={columns} data={filteredUyeler} />
             </div>
             {selectedUye && (
                 <AidatTakipModal
@@ -88,7 +125,7 @@ const AidatTakipModal: React.FC<{ uye: Person; onClose: () => void; }> = ({ uye,
         setIsLoading(true);
         setError('');
         try {
-            const data = await getAidatlarByUyeId(uye.id);
+            const data = await getAidatlarByUyeId(Number(uye.id));
             setAidatlar(data);
         } catch (err: any) {
             if (err.message && err.message.includes('relation "public.aidatlar" does not exist')) {
@@ -120,7 +157,7 @@ const AidatTakipModal: React.FC<{ uye: Person; onClose: () => void; }> = ({ uye,
     const handleCreateAidat = async (e: React.FormEvent) => {
         e.preventDefault();
         const payload: Omit<Aidat, 'id'> = {
-            uyeId: uye.id,
+            uyeId: Number(uye.id),
             donem: new Date(newAidat.donem).toLocaleString('tr-TR', { month: 'long', year: 'numeric' }),
             tutar: parseFloat(newAidat.tutar),
             durum: AidatDurumu.BEKLEMEDE,
@@ -138,7 +175,7 @@ const AidatTakipModal: React.FC<{ uye: Person; onClose: () => void; }> = ({ uye,
     };
 
     return (
-        <Modal isOpen={true} onClose={onClose} title={`${uye.ad} ${uye.soyad} - Aidat Takibi`}>
+        <Modal isOpen={true} onClose={onClose} title={`${uye.first_name} ${uye.last_name} - Aidat Takibi`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                     <h4 className="font-semibold text-zinc-800 dark:text-zinc-200">Aidat Geçmişi</h4>
@@ -150,7 +187,7 @@ const AidatTakipModal: React.FC<{ uye: Person; onClose: () => void; }> = ({ uye,
                             <div className="flex justify-between items-center">
                                 <div>
                                     <p className="font-semibold text-zinc-700 dark:text-zinc-200">{aidat.donem}</p>
-                                    <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100">{aidat.tutar.toLocaleString('tr-TR', {style:'currency', currency: 'TRY'})}</p>
+                                    <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100">{(aidat.tutar ?? 0).toLocaleString('tr-TR', {style:'currency', currency: 'TRY'})}</p>
                                 </div>
                                 {aidat.durum === AidatDurumu.ODENDI ? (
                                     <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">ÖDENDİ</span>

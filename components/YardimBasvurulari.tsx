@@ -8,6 +8,8 @@ import { OdemeTuru, OdemeYontemi, OdemeDurumu } from '../types.ts';
 import { usePDFGenerator } from '../src/hooks/usePDFGenerator';
 import { useExcelUtils } from '../src/hooks/useExcelUtils';
 import SearchableSelect from './SearchableSelect.tsx';
+import AdvancedFilter from '../src/components/AdvancedFilter';
+import SmartSearch from '../src/components/SmartSearch';
 
 
 const getStatusClass = (status: BasvuruStatus) => {
@@ -45,9 +47,32 @@ const YardimBasvurulari: React.FC = () => {
     const [searchParams] = ReactRouterDOM.useSearchParams();
     const kisiAdiFromQuery = searchParams.get('kisiAdi');
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<BasvuruStatus | 'all'>('all');
-    const [typeFilter, setTypeFilter] = useState<YardimTuru | 'all'>('all');
+    const [filters, setFilters] = useState({
+        searchTerm: '',
+        statusFilter: 'all' as BasvuruStatus | 'all',
+        typeFilter: 'all' as YardimTuru | 'all',
+        priorityFilter: 'all' as BasvuruOncelik | 'all',
+        amountMin: '',
+        amountMax: '',
+        applicationDateFrom: '',
+        applicationDateTo: '',
+        multipleStatusFilter: [] as BasvuruStatus[],
+        multipleTypeFilter: [] as YardimTuru[],
+        hasPresidentApproval: 'all' as 'all' | 'yes' | 'no',
+        hasPayment: 'all' as 'all' | 'yes' | 'no',
+    });
+    
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+    const [currentViewName, setCurrentViewName] = useState('');
+    const [showSaveViewModal, setShowSaveViewModal] = useState(false);
+    
+    interface SavedView {
+        id: string;
+        name: string;
+        filters: any;
+        createdAt: string;
+    }
 
     const [isEvalModalOpen, setIsEvalModalOpen] = useState(false);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -77,7 +102,7 @@ const YardimBasvurulari: React.FC = () => {
     
     useEffect(() => {
         if (kisiAdiFromQuery) {
-            setSearchTerm(decodeURIComponent(kisiAdiFromQuery));
+            setFilters(prev => ({ ...prev, searchTerm: decodeURIComponent(kisiAdiFromQuery) }));
         }
     }, [kisiAdiFromQuery]);
 
@@ -87,13 +112,77 @@ const YardimBasvurulari: React.FC = () => {
 
     const filteredBasvurular = useMemo(() => {
         return applications.filter(basvuru => {
-            const applicantName = peopleMap.get(basvuru.basvuruSahibiId) || '';
-            const matchesSearch = applicantName.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'all' || basvuru.durum === statusFilter;
-            const matchesType = typeFilter === 'all' || basvuru.basvuruTuru === typeFilter;
-            return matchesSearch && matchesStatus && matchesType;
+            const applicantName = peopleMap.get(basvuru.basvuruSahibiId.toString()) || '';
+            
+            // Temel arama
+            const matchesSearch = filters.searchTerm === '' || 
+                applicantName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                basvuru.talepDetayi?.toLowerCase().includes(filters.searchTerm.toLowerCase());
+            
+            // Durum filtreleri
+            const matchesStatus = filters.statusFilter === 'all' || basvuru.durum === filters.statusFilter;
+            const matchesMultipleStatus = filters.multipleStatusFilter.length === 0 || 
+                filters.multipleStatusFilter.includes(basvuru.durum);
+            
+            // Tür filtreleri
+            const matchesType = filters.typeFilter === 'all' || basvuru.basvuruTuru === filters.typeFilter;
+            const matchesMultipleType = filters.multipleTypeFilter.length === 0 || 
+                filters.multipleTypeFilter.includes(basvuru.basvuruTuru);
+            
+            // Öncelik filtresi
+            const matchesPriority = filters.priorityFilter === 'all' || basvuru.oncelik === filters.priorityFilter;
+            
+            // Tutar aralığı filtresi
+            let matchesAmountRange = true;
+            if (filters.amountMin && basvuru.talepTutari < parseFloat(filters.amountMin)) {
+                matchesAmountRange = false;
+            }
+            if (filters.amountMax && basvuru.talepTutari > parseFloat(filters.amountMax)) {
+                matchesAmountRange = false;
+            }
+            
+            // Başvuru tarihi aralığı filtresi
+            let matchesApplicationDate = true;
+            if (filters.applicationDateFrom || filters.applicationDateTo) {
+                const applicationDate = new Date(basvuru.basvuruTarihi);
+                
+                if (filters.applicationDateFrom) {
+                    const fromDate = new Date(filters.applicationDateFrom);
+                    if (applicationDate < fromDate) {
+                        matchesApplicationDate = false;
+                    }
+                }
+                if (filters.applicationDateTo) {
+                    const toDate = new Date(filters.applicationDateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    if (applicationDate > toDate) {
+                        matchesApplicationDate = false;
+                    }
+                }
+            }
+            
+            // Başkan onayı filtresi
+            let matchesPresidentApproval = true;
+            if (filters.hasPresidentApproval === 'yes') {
+                matchesPresidentApproval = basvuru.baskanOnayi === true;
+            } else if (filters.hasPresidentApproval === 'no') {
+                matchesPresidentApproval = basvuru.baskanOnayi !== true;
+            }
+            
+            // Ödeme filtresi
+            let matchesPayment = true;
+            if (filters.hasPayment === 'yes') {
+                matchesPayment = !!basvuru.odemeId;
+            } else if (filters.hasPayment === 'no') {
+                matchesPayment = !basvuru.odemeId;
+            }
+            
+            return matchesSearch && matchesStatus && matchesMultipleStatus && 
+                   matchesType && matchesMultipleType && matchesPriority && 
+                   matchesAmountRange && matchesApplicationDate && 
+                   matchesPresidentApproval && matchesPayment;
         });
-    }, [applications, searchTerm, statusFilter, typeFilter, peopleMap]);
+    }, [applications, filters, peopleMap]);
 
     const handleSaveEvaluation = async (updatedBasvuru: YardimBasvurusu) => {
         try {
@@ -136,7 +225,7 @@ const YardimBasvurulari: React.FC = () => {
             return;
         }
 
-        const applicant = people.find(p => p.id === application.basvuruSahibiId);
+        const applicant = people.find(p => p.id === application.basvuruSahibiId.toString());
         if (!applicant) {
             toast.error("Başvuru sahibi sistemde bulunamadı. Lütfen kontrol edin.");
             return;
@@ -160,6 +249,82 @@ const YardimBasvurulari: React.FC = () => {
         } catch(err) {
              toast.error('Ödeme oluşturulurken bir hata oluştu.');
         }
+    };
+
+    const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const handleMultipleFilterChange = (filterName: 'multipleStatusFilter' | 'multipleTypeFilter', value: BasvuruStatus | YardimTuru) => {
+        setFilters(prev => {
+            const currentValues = prev[filterName] as any[];
+            const newValues = currentValues.includes(value)
+                ? currentValues.filter(v => v !== value)
+                : [...currentValues, value];
+            return { ...prev, [filterName]: newValues };
+        });
+    };
+    
+    const clearAllFilters = () => {
+        setFilters({
+            searchTerm: '',
+            statusFilter: 'all',
+            typeFilter: 'all',
+            priorityFilter: 'all',
+            amountMin: '',
+            amountMax: '',
+            applicationDateFrom: '',
+            applicationDateTo: '',
+            multipleStatusFilter: [],
+            multipleTypeFilter: [],
+            hasPresidentApproval: 'all',
+            hasPayment: 'all',
+        });
+    };
+    
+    const saveCurrentView = () => {
+        if (!currentViewName.trim()) {
+            toast.error('Lütfen görünüm adı girin');
+            return;
+        }
+        
+        const newView: SavedView = {
+            id: Date.now().toString(),
+            name: currentViewName,
+            filters: { ...filters },
+            createdAt: new Date().toISOString()
+        };
+        
+        setSavedViews(prev => [...prev, newView]);
+        setCurrentViewName('');
+        setShowSaveViewModal(false);
+        toast.success('Görünüm kaydedildi!');
+    };
+    
+    const loadSavedView = (view: SavedView) => {
+        setFilters(view.filters);
+        toast.success(`"${view.name}" görünümü yüklendi`);
+    };
+    
+    const deleteSavedView = (viewId: string) => {
+        setSavedViews(prev => prev.filter(v => v.id !== viewId));
+        toast.success('Görünüm silindi');
+    };
+    
+    const getActiveFilterCount = () => {
+        let count = 0;
+        if (filters.searchTerm) count++;
+        if (filters.statusFilter !== 'all') count++;
+        if (filters.typeFilter !== 'all') count++;
+        if (filters.priorityFilter !== 'all') count++;
+        if (filters.amountMin || filters.amountMax) count++;
+        if (filters.applicationDateFrom || filters.applicationDateTo) count++;
+        if (filters.multipleStatusFilter.length > 0) count++;
+        if (filters.multipleTypeFilter.length > 0) count++;
+        if (filters.hasPresidentApproval !== 'all') count++;
+        if (filters.hasPayment !== 'all') count++;
+        return count;
     };
 
     const handleExportExcel = () => {
@@ -207,33 +372,154 @@ const YardimBasvurulari: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 mb-6">
-                    <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-4">
+                {/* Akıllı Arama */}
+                <div className="mb-4">
+                    <SmartSearch
+                        placeholder="Başvuru ara..."
+                        onSearch={(searchTerm) => setFilters(prev => ({ ...prev, searchTerm }))}
+                    />
+                </div>
+
+                {/* Temel Filtreler */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div className="relative">
                         <input
                             type="text"
-                            placeholder="Kişi adı ile ara..."
-                            className="w-full md:w-48 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-zinc-700"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            name="searchTerm"
+                            placeholder="Kişi adı, talep detayı..."
+                            className="w-full px-3 py-2 pl-10 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                            value={filters.searchTerm}
+                            onChange={handleFilterChange}
                         />
-                        <select 
-                            className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-zinc-700"
-                            value={typeFilter}
-                            onChange={(e) => setTypeFilter(e.target.value as YardimTuru | 'all')}
+                        <svg className="absolute left-3 top-2.5 h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <select 
+                        name="statusFilter"
+                        className="px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        value={filters.statusFilter}
+                        onChange={handleFilterChange}
+                    >
+                        <option value="all">Tüm Durumlar</option>
+                        {Object.values(BasvuruStatus).map(durum => <option key={durum} value={durum}>{durum}</option>)}
+                    </select>
+                    <select 
+                        name="typeFilter"
+                        className="px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        value={filters.typeFilter}
+                        onChange={handleFilterChange}
+                    >
+                        <option value="all">Tüm Yardım Türleri</option>
+                        {Object.values(YardimTuru).map(tur => <option key={tur} value={tur}>{tur}</option>)}
+                    </select>
+                    <select 
+                        name="priorityFilter"
+                        className="px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        value={filters.priorityFilter}
+                        onChange={handleFilterChange}
+                    >
+                        <option value="all">Tüm Öncelikler</option>
+                        {Object.values(BasvuruOncelik).map(priority => <option key={priority} value={priority}>{priority}</option>)}
+                    </select>
+                </div>
+                
+                {/* Filtre Kontrolleri */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600"
                         >
-                            <option value="all">Tüm Yardım Türleri</option>
-                            {Object.values(YardimTuru).map(tur => <option key={tur} value={tur}>{tur}</option>)}
-                        </select>
-                        <select 
-                            className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-zinc-700"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as BasvuruStatus | 'all')}
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                            </svg>
+                            Gelişmiş Filtreler
+                            {showAdvancedFilters ? 
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg> :
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            }
+                        </button>
+                        
+                        {getActiveFilterCount() > 0 && (
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                                    {getActiveFilterCount()} filtre aktif
+                                </span>
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
+                                >
+                                    Temizle
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        {savedViews.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <select 
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            const view = savedViews.find(v => v.id === e.target.value);
+                                            if (view) loadSavedView(view);
+                                        }
+                                    }}
+                                    className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                                    value=""
+                                >
+                                    <option value="">Kayıtlı Görünümler</option>
+                                    {savedViews.map(view => (
+                                        <option key={view.id} value={view.id}>{view.name}</option>
+                                    ))}
+                                </select>
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => {
+                                            const viewId = prompt('Silinecek görünümün ID\'sini girin:');
+                                            if (viewId) deleteSavedView(viewId);
+                                        }}
+                                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                        title="Görünüm Sil"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setShowSaveViewModal(true)}
+                            className="px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30"
                         >
-                            <option value="all">Tüm Durumlar</option>
-                            {Object.values(BasvuruStatus).map(durum => <option key={durum} value={durum}>{durum}</option>)}
-                        </select>
+                            Görünümü Kaydet
+                        </button>
                     </div>
                 </div>
+                
+                {/* Gelişmiş Filtreler */}
+                {showAdvancedFilters && (
+                    <AdvancedFilter
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                        filterOptions={[
+                            { key: 'status', label: 'Durum', type: 'select', options: [
+                                { value: 'beklemede', label: 'Beklemede' },
+                                { value: 'onaylandi', label: 'Onaylandı' },
+                                { value: 'reddedildi', label: 'Reddedildi' }
+                            ]},
+                            { key: 'yardimTuru', label: 'Yardım Türü', type: 'select', options: [
+                                { value: 'gida', label: 'Gıda' },
+                                { value: 'giyim', label: 'Giyim' },
+                                { value: 'nakit', label: 'Nakit' },
+                                { value: 'egitim', label: 'Eğitim' }
+                            ]},
+                            { key: 'basvuruTarihi', label: 'Başvuru Tarihi', type: 'dateRange' }
+                        ]}
+                    />
+                )}
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-zinc-500 dark:text-zinc-400">
@@ -248,7 +534,7 @@ const YardimBasvurulari: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
                             {filteredBasvurular.map((basvuru) => {
-                                const applicantName = peopleMap.get(basvuru.basvuruSahibiId) || `Bilinmeyen ID: ${basvuru.basvuruSahibiId}`;
+                                const applicantName = peopleMap.get(basvuru.basvuruSahibiId.toString()) || `Bilinmeyen ID: ${basvuru.basvuruSahibiId}`;
                                 return (
                                 <tr key={basvuru.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
                                     <td className="px-6 py-4">
@@ -324,6 +610,47 @@ const YardimBasvurulari: React.FC = () => {
                     onClose={() => { setIsFormModalOpen(false); setEditingBasvuru(null); }}
                     onSave={handleSaveBasvuru}
                 />
+            )}
+
+            {/* Görünüm Kaydetme Modalı */}
+            {showSaveViewModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-zinc-800 p-6 rounded-lg w-full max-w-md mx-4">
+                        <h3 className="text-lg font-semibold mb-4 text-zinc-900 dark:text-zinc-100">Görünümü Kaydet</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                    Görünüm Adı
+                                </label>
+                                <input
+                                     type="text"
+                                     value={currentViewName}
+                                     onChange={(e) => setCurrentViewName(e.target.value)}
+                                     placeholder="Örn: Acil Başvurular"
+                                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                                 />
+                            </div>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowSaveViewModal(false);
+                                        setCurrentViewName('');
+                                    }}
+                                    className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    onClick={saveCurrentView}
+                                    disabled={!currentViewName.trim()}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Kaydet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

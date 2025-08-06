@@ -97,7 +97,7 @@ const BaskanOnayi: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                                     {/* Info */}
                                     <div className="md:col-span-2">
-                                        <p className="font-bold text-slate-800">{peopleMap.get(app.basvuruSahibiId) || 'Bilinmeyen Kişi'}</p>
+                                        <p className="font-bold text-slate-800">{peopleMap.get(String(app.basvuruSahibiId)) || 'Bilinmeyen Kişi'}</p>
                                         <p className="text-sm text-slate-600">{app.basvuruTuru}</p>
                                         <p className="text-xs text-slate-400">Başvuru Tarihi: {new Date(app.basvuruTarihi).toLocaleDateString('tr-TR')}</p>
                                     </div>
@@ -132,7 +132,7 @@ const BaskanOnayi: React.FC = () => {
             {onayModal && (
                 <OnayModal
                     application={onayModal.application}
-                    applicantName={peopleMap.get(onayModal.application.basvuruSahibiId) || 'Bilinmeyen Kişi'}
+                    applicantName={peopleMap.get(String(onayModal.application.basvuruSahibiId)) || 'Bilinmeyen Kişi'}
                     isApprove={onayModal.isApprove}
                     onClose={() => setOnayModal(null)}
                     onSubmit={handleOnaySubmit}

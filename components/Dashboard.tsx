@@ -118,7 +118,7 @@ const MonthlyDonationsChart: React.FC<{ data: any[] }> = ({ data }) => {
                                     border: '1px solid #e2e8f0',
                                     borderRadius: '0.5rem',
                                 }}
-                                formatter={(value: number) => [value.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }), 'Toplam Bağış']}
+                                formatter={(value: number) => [(value ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }), 'Toplam Bağış']}
                             />
                             <Legend />
                             <Line type="monotone" dataKey="value" name="Bağış" stroke="#0A84FF" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
@@ -136,14 +136,14 @@ const Dashboard = () => {
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     <StatCardSkeleton />
                     <StatCardSkeleton />
                     <StatCardSkeleton />
                     <StatCardSkeleton />
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                     <div className="lg:col-span-2">
                         <ChartSkeleton height={288} />
                     </div>
@@ -179,39 +179,45 @@ const Dashboard = () => {
 
     const { stats } = data;
 
+    // Güvenli değer kontrolü için yardımcı fonksiyon
+    const safeNumber = (value: number | undefined): number => value ?? 0;
+    const safeCurrency = (value: number | undefined): string => {
+        return safeNumber(value).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
+    };
+
     return (
-        <div className="space-y-6">
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <StatCard 
                     title="Toplam Üye Sayısı" 
-                    value={stats.totalMembers} 
+                    value={safeNumber(stats?.totalMembers)} 
                     icon={ICONS.PEOPLE} 
                     color="primary"
                 />
                 <StatCard 
                     title="Bu Ayki Bağışlar" 
-                    value={stats.monthlyDonations.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} 
+                    value={safeCurrency(stats?.monthlyDonations)} 
                     icon={ICONS.DONATION} 
                     color="success"
                 />
                 <StatCard 
                     title="Aktif Projeler" 
-                    value={stats.activeProjects} 
+                    value={safeNumber(stats?.activeProjects)} 
                     icon={ICONS.CLIPBOARD_DOCUMENT_LIST} 
                     color="primary"
                 />
                 <StatCard 
                     title="Bekleyen Başvurular" 
-                    value={stats.pendingApplications} 
+                    value={safeNumber(stats?.pendingApplications)} 
                     icon={ICONS.AID_RECIPIENT} 
                     color="warning"
                 />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                     <MonthlyDonationsChart data={data.monthlyDonationData} />
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     <RecentActivityList activities={data.recentActivities} />
                 </div>
             </div>

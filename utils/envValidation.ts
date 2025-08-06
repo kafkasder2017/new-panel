@@ -3,11 +3,15 @@
  * Validates required environment variables on application startup
  */
 
+import { logger } from './logger';
+
 export interface EnvConfig {
   supabaseUrl: string;
   supabaseAnonKey: string;
   geminiApiKey?: string;
   openRouterApiKey?: string;
+  devEmail?: string;
+  devPassword?: string;
 }
 
 export interface ValidationResult {
@@ -29,7 +33,9 @@ const REQUIRED_ENV_VARS = {
  */
 const OPTIONAL_ENV_VARS = {
   GEMINI_API_KEY: 'Gemini API key is missing - AI features may not work properly',
-  VITE_OPENROUTER_API_KEY: 'OpenRouter API key is missing - fallback AI features may not work'
+  VITE_OPENROUTER_API_KEY: 'OpenRouter API key is missing - fallback AI features may not work',
+  VITE_DEV_EMAIL: 'Development email is missing - auto-fill feature may not work',
+  VITE_DEV_PASSWORD: 'Development password is missing - auto-fill feature may not work'
 } as const;
 
 /**
@@ -101,14 +107,16 @@ export function getEnvConfig(): EnvConfig {
   
   // Log warnings if any
   if (validation.warnings.length > 0) {
-    console.warn('Environment warnings:', validation.warnings);
+    logger.warn('Environment configuration warnings', { warnings: validation.warnings });
   }
   
   return {
     supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
     supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
     geminiApiKey: import.meta.env.GEMINI_API_KEY,
-    openRouterApiKey: import.meta.env.VITE_OPENROUTER_API_KEY
+    openRouterApiKey: import.meta.env.VITE_OPENROUTER_API_KEY,
+    devEmail: import.meta.env.VITE_DEV_EMAIL,
+    devPassword: import.meta.env.VITE_DEV_PASSWORD
   };
 }
 
@@ -118,21 +126,15 @@ export function getEnvConfig(): EnvConfig {
 export function checkEnvironmentStatus(): void {
   const validation = validateEnvironmentVariables();
   
-  console.group('🔧 Environment Configuration Status');
-  
   if (validation.isValid) {
-    console.log('✅ All required environment variables are configured');
+    logger.info('All required environment variables are configured');
   } else {
-    console.error('❌ Environment validation failed:');
-    validation.errors.forEach(error => console.error(`  • ${error}`));
+    logger.error('Environment validation failed', { errors: validation.errors });
   }
   
   if (validation.warnings.length > 0) {
-    console.warn('⚠️ Environment warnings:');
-    validation.warnings.forEach(warning => console.warn(`  • ${warning}`));
+    logger.warn('Environment configuration has warnings', { warnings: validation.warnings });
   }
-  
-  console.groupEnd();
 }
 
 /**

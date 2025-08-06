@@ -175,19 +175,15 @@ export class ExcelUtils {
   static exportPersons(persons: Person[], options: Partial<ExcelExportOptions> = {}): void {
     const customHeaders = {
       id: 'ID',
-      adSoyad: 'Ad Soyad',
-      tcKimlik: 'TC Kimlik',
-      telefon: 'Telefon',
+      first_name: 'Ad',
+      last_name: 'Soyad',
+      identity_number: 'TC Kimlik',
+      phone: 'Telefon',
       email: 'E-posta',
-      adres: 'Adres',
-      dogumTarihi: 'Doğum Tarihi',
-      meslek: 'Meslek',
-      gelirDurumu: 'Gelir Durumu',
-      medeniDurum: 'Medeni Durum',
-      cocukSayisi: 'Çocuk Sayısı',
-      notlar: 'Notlar',
-      kayitTarihi: 'Kayıt Tarihi',
-      guncellemeTarihi: 'Güncelleme Tarihi'
+      address: 'Adres',
+      birth_date: 'Doğum Tarihi',
+      status: 'Durum',
+      registration_date: 'Kayıt Tarihi'
     };
 
     this.exportToExcel(persons, {

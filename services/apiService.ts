@@ -10,9 +10,11 @@ import {
     Kullanici as KullaniciData,
     BildirimDurumu,
     UserSession, FailedLoginAttempt, PersonDocumentNew, PersonNote, AidPayment,
-    Membership, MembershipFee, NotificationNew, FileUpload, DonationCampaign
+    Membership, MembershipFee, NotificationNew, FileUpload, DonationCampaign,
+    YardimTalebi, MembershipType
 } from '../types';
 import { supabase, userToProfile } from './supabaseClient';
+import { MOCK_ETKINLIKLER } from '../data/mockEtkinlikler';
 
 
 // --- Generic Supabase Helper Functions ---
@@ -109,13 +111,81 @@ export const createDenetimKaydi = (kayit: Omit<DenetimKaydi, 'id'>): Promise<Den
 // Yorumlar
 export const createYorum = (yorum: Omit<Yorum, 'id'>): Promise<Yorum> => createRecord<Yorum>('yorumlar', yorum);
 
-// Kişiler
-export const getPeople = (): Promise<Person[]> => getAll<Person>('people');
-export const getPersonById = (id: number): Promise<Person> => getById<Person>('people', id);
-export const createPerson = (person: Omit<Person, 'id'>): Promise<Person> => createRecord<Person>('people', person);
-export const updatePerson = (id: number, person: Partial<Person>): Promise<Person> => updateRecord<Person>('people', id, person);
-export const deletePerson = (id: number): Promise<void> => deleteRecord('people', id);
-export const deletePeople = async (ids: number[]): Promise<void> => {
+// Kişiler - Transform data between frontend and database formats
+const transformPersonFromDB = (dbPerson: any): Person => {
+    return {
+        ...dbPerson,
+        ad: dbPerson.first_name,
+        soyad: dbPerson.last_name,
+        adSoyad: `${dbPerson.first_name} ${dbPerson.last_name}`,
+        kimlikNo: dbPerson.identity_number,
+        cepTelefonu: dbPerson.phone,
+        dogumTarihi: dbPerson.birth_date,
+        kayitTarihi: dbPerson.registration_date,
+        durum: dbPerson.status,
+        membershipType: dbPerson.person_type
+    };
+};
+
+const transformPersonToDB = (person: Partial<Person>): any => {
+    const dbPerson: any = { ...person };
+    
+    // Map frontend fields to database fields
+    if (person.ad) dbPerson.first_name = person.ad;
+    if (person.soyad) dbPerson.last_name = person.soyad;
+    if (person.kimlikNo) dbPerson.identity_number = person.kimlikNo;
+    if (person.cepTelefonu) dbPerson.phone = person.cepTelefonu;
+    if (person.dogumTarihi) dbPerson.birth_date = person.dogumTarihi;
+    if (person.kayitTarihi) dbPerson.registration_date = person.kayitTarihi;
+    if (person.durum) dbPerson.status = person.durum;
+    if (person.membershipType) dbPerson.person_type = person.membershipType;
+    
+    // Remove frontend-only fields
+    delete dbPerson.ad;
+    delete dbPerson.soyad;
+    delete dbPerson.adSoyad;
+    delete dbPerson.kimlikNo;
+    delete dbPerson.cepTelefonu;
+    delete dbPerson.dogumTarihi;
+    delete dbPerson.kayitTarihi;
+    delete dbPerson.durum;
+    delete dbPerson.membershipType;
+    
+    return dbPerson;
+};
+
+export const getPeople = async (): Promise<Person[]> => {
+    const { data, error } = await supabase.from('people').select('*').order('created_at', { ascending: false });
+    if (error) handleSupabaseError(error, 'get all people');
+    return (data || []).map(transformPersonFromDB);
+};
+
+export const getPersonById = async (id: string): Promise<Person> => {
+    const { data, error } = await supabase.from('people').select('*').eq('id', id).single();
+    if (error) handleSupabaseError(error, `get person by id ${id}`);
+    return transformPersonFromDB(data);
+};
+
+export const createPerson = async (person: Omit<Person, 'id'>): Promise<Person> => {
+    const dbPerson = transformPersonToDB(person);
+    const { data, error } = await supabase.from('people').insert([dbPerson]).select().single();
+    if (error) handleSupabaseError(error, 'create person');
+    return transformPersonFromDB(data);
+};
+
+export const updatePerson = async (id: string, person: Partial<Person>): Promise<Person> => {
+    const dbPerson = transformPersonToDB(person);
+    const { data, error } = await supabase.from('people').update(dbPerson).eq('id', id).select().single();
+    if (error) handleSupabaseError(error, `update person ${id}`);
+    return transformPersonFromDB(data);
+};
+
+export const deletePerson = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('people').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete person ${id}`);
+};
+
+export const deletePeople = async (ids: string[]): Promise<void> => {
     const { error } = await supabase.from('people').delete().in('id', ids);
     if (error) handleSupabaseError(error, 'delete multiple people');
 };
@@ -180,17 +250,51 @@ export const createOdeme = (odeme: Omit<Odeme, 'id'>): Promise<Odeme> => createR
 export const updateOdeme = (id: number, odeme: Partial<Odeme>): Promise<Odeme> => updateRecord<Odeme>('odemeler', id, odeme);
 export const deleteOdeme = (id: number): Promise<void> => deleteRecord('odemeler', id);
 
-// Finansal Kayıtlar
-export const getFinansalKayitlar = (): Promise<FinansalKayit[]> => getAll<FinansalKayit>('finansal_kayitlar');
-export const createFinansalKayit = (kayit: Omit<FinansalKayit, 'id'>): Promise<FinansalKayit> => createRecord<FinansalKayit>('finansal_kayitlar', kayit);
-export const updateFinansalKayit = (id: number, kayit: Partial<FinansalKayit>): Promise<FinansalKayit> => updateRecord<FinansalKayit>('finansal_kayitlar', id, kayit);
-export const deleteFinansalKayit = (id: number): Promise<void> => deleteRecord('finansal_kayitlar', id);
+// Finansal Kayıtlar - Use financial_transactions table
+export const getFinansalKayitlar = (): Promise<FinansalKayit[]> => getAll<FinansalKayit>('financial_transactions');
+// Use financial_transactions table instead of finansal_kayitlar
+export const createFinansalKayit = (kayit: Omit<FinansalKayit, 'id'>): Promise<FinansalKayit> => createRecord<FinansalKayit>('financial_transactions', kayit);
+export const updateFinansalKayit = (id: number, kayit: Partial<FinansalKayit>): Promise<FinansalKayit> => updateRecord<FinansalKayit>('financial_transactions', id, kayit);
+export const deleteFinansalKayit = (id: number): Promise<void> => deleteRecord('financial_transactions', id);
 
-// Gönüllüler
-export const getGonulluler = (): Promise<Gonullu[]> => getAll<Gonullu>('gonulluler');
-export const getGonulluById = (id: number): Promise<Gonullu> => getById<Gonullu>('gonulluler', id);
-export const createGonullu = (gonullu: Omit<Gonullu, 'id'>): Promise<Gonullu> => createRecord<Gonullu>('gonulluler', gonullu);
-export const updateGonullu = (id: number, gonullu: Partial<Gonullu>): Promise<Gonullu> => updateRecord<Gonullu>('gonulluler', id, gonullu);
+// Gönüllüler - Placeholder functions that use people table with filters
+export const getGonulluler = async (): Promise<Gonullu[]> => {
+    const people = await getPeople();
+    return people
+        .filter(p => p.membershipType === MembershipType.GONULLU)
+        .map(person => {
+            let volunteerData: any = {};
+            try {
+                volunteerData = person.notes ? JSON.parse(person.notes as unknown as string) : {};
+            } catch (e) {
+                console.warn('Failed to parse volunteer data from notes:', e);
+            }
+            return {
+                id: person.id,
+                personId: person.id,
+                beceriler: volunteerData.beceriler || [],
+                musaitlik: volunteerData.musaitlik || '',
+                durum: volunteerData.durum || 'Aktif',
+                baslangicTarihi: volunteerData.baslangicTarihi || person.kayitTarihi,
+                toplamSaat: volunteerData.toplamSaat || 0,
+                ...volunteerData
+            } as Gonullu;
+        });
+};
+export const getGonulluById = async (id: string): Promise<Gonullu> => {
+    const gonulluler = await getGonulluler();
+    const gonullu = gonulluler.find(g => g.id.toString() === id);
+    if (!gonullu) throw new Error('Gönüllü bulunamadı');
+    return gonullu;
+};
+export const createGonullu = async (gonullu: Omit<Gonullu, 'id'>): Promise<Gonullu> => {
+    // This would need to be implemented by updating the person's membershipType and notes
+    throw new Error('createGonullu function needs to be implemented');
+};
+export const updateGonullu = async (id: string, gonullu: Partial<Gonullu>): Promise<Gonullu> => {
+    // This would need to be implemented by updating the person's notes
+    throw new Error('updateGonullu function needs to be implemented');
+};
 
 // Vefa Destek
 export const getVefaDestekList = (): Promise<VefaDestek[]> => getAll<VefaDestek>('vefa_destek');
@@ -224,16 +328,55 @@ export const createOgrenciBursu = (burs: Omit<OgrenciBursu, 'id'>): Promise<Ogre
 export const updateOgrenciBursu = (id: number, burs: Partial<OgrenciBursu>): Promise<OgrenciBursu> => updateRecord<OgrenciBursu>('ogrenci_burslari', id, burs);
 export const deleteOgrenciBursu = (id: number): Promise<void> => deleteRecord('ogrenci_burslari', id);
 
-// Etkinlikler
-export const getEtkinlikler = (): Promise<Etkinlik[]> => getAll<Etkinlik>('etkinlikler');
-export const getEtkinlikById = (id: number): Promise<Etkinlik> => getById<Etkinlik>('etkinlikler', id);
-export const createEtkinlik = (etkinlik: Omit<Etkinlik, 'id'>): Promise<Etkinlik> => createRecord<Etkinlik>('etkinlikler', etkinlik);
-export const updateEtkinlik = (id: number, etkinlik: Partial<Etkinlik>): Promise<Etkinlik> => updateRecord<Etkinlik>('etkinlikler', id, etkinlik);
-export const deleteEtkinlik = (id: number): Promise<void> => deleteRecord('etkinlikler', id);
+// Etkinlikler - Using mock data since etkinlikler table doesn't exist
+
+let etkinliklerData = [...MOCK_ETKINLIKLER];
+let nextEtkinlikId = Math.max(...etkinliklerData.map(e => e.id)) + 1;
+
+export const getEtkinlikler = (): Promise<Etkinlik[]> => {
+    return Promise.resolve([...etkinliklerData]);
+};
+
+export const getEtkinlikById = (id: number): Promise<Etkinlik> => {
+    const etkinlik = etkinliklerData.find(e => e.id === id);
+    if (!etkinlik) {
+        return Promise.reject(new Error(`Etkinlik bulunamadı: ${id}`));
+    }
+    return Promise.resolve({ ...etkinlik });
+};
+
+export const createEtkinlik = (etkinlik: Omit<Etkinlik, 'id'>): Promise<Etkinlik> => {
+    const newEtkinlik: Etkinlik = {
+        ...etkinlik,
+        id: nextEtkinlikId++,
+        katilimcilar: etkinlik.katilimcilar || []
+    };
+    etkinliklerData.push(newEtkinlik);
+    return Promise.resolve({ ...newEtkinlik });
+};
+
+export const updateEtkinlik = (id: number, etkinlik: Partial<Etkinlik>): Promise<Etkinlik> => {
+    const index = etkinliklerData.findIndex(e => e.id === id);
+    if (index === -1) {
+        return Promise.reject(new Error(`Etkinlik bulunamadı: ${id}`));
+    }
+    etkinliklerData[index] = { ...etkinliklerData[index], ...etkinlik };
+    return Promise.resolve({ ...etkinliklerData[index] });
+};
+
+export const deleteEtkinlik = (id: number): Promise<void> => {
+    const index = etkinliklerData.findIndex(e => e.id === id);
+    if (index === -1) {
+        return Promise.reject(new Error(`Etkinlik bulunamadı: ${id}`));
+    }
+    etkinliklerData.splice(index, 1);
+    return Promise.resolve();
+};
 
 // Toplu İletişim
-export const getMessages = (): Promise<GonderilenMesaj[]> => getAll<GonderilenMesaj>('gonderilen_mesajlar');
-export const createMessageLog = (log: Omit<GonderilenMesaj, 'id'>): Promise<GonderilenMesaj> => createRecord<GonderilenMesaj>('gonderilen_mesajlar', log);
+// Use message_queue table instead of gonderilen_mesajlar
+export const getMessages = (): Promise<GonderilenMesaj[]> => getAll<GonderilenMesaj>('message_queue');
+export const createMessageLog = (log: Omit<GonderilenMesaj, 'id'>): Promise<GonderilenMesaj> => createRecord<GonderilenMesaj>('message_queue', log);
 
 // Ayni Yardim
 export const getAyniYardimIslemleri = (): Promise<AyniYardimIslemi[]> => getAll<AyniYardimIslemi>('ayni_yardim_islemleri');
@@ -279,9 +422,9 @@ export const createWebhook = (webhook: Omit<Webhook, 'id'>): Promise<Webhook> =>
 export const updateWebhook = (id: number, webhook: Partial<Webhook>): Promise<Webhook> => updateRecord<Webhook>('webhooks', id, webhook);
 export const deleteWebhook = (id: number): Promise<void> => deleteRecord('webhooks', id);
 
-// Ayarlar
-export const getSistemAyarlari = (): Promise<SistemAyarlari> => getById<SistemAyarlari>('ayarlar', 1);
-export const updateSistemAyarlari = (settings: Partial<SistemAyarlari>): Promise<SistemAyarlari> => updateRecord<SistemAyarlari>('ayarlar', 1, settings);
+// Ayarlar - Use system_settings table instead of ayarlar
+export const getSistemAyarlari = (): Promise<SistemAyarlari> => getById<SistemAyarlari>('system_settings', 1);
+export const updateSistemAyarlari = (settings: Partial<SistemAyarlari>): Promise<SistemAyarlari> => updateRecord<SistemAyarlari>('system_settings', 1, settings);
 
 // Aidatlar
 export const getAidatlarByUyeId = async (uyeId: number): Promise<Aidat[]> => {
@@ -393,12 +536,7 @@ export const getPublicUrl = (path: string): string => {
     return data.publicUrl;
 };
 
-// Kurumlar
-export const getKurumlar = (): Promise<Kurum[]> => getAll<Kurum>('kurumlar');
-export const getKurumById = (id: number): Promise<Kurum> => getById<Kurum>('kurumlar', id);
-export const createKurum = (kurum: Omit<Kurum, 'id'>): Promise<Kurum> => createRecord<Kurum>('kurumlar', kurum);
-export const updateKurum = (id: number, kurum: Partial<Kurum>): Promise<Kurum> => updateRecord<Kurum>('kurumlar', id, kurum);
-export const deleteKurum = (id: number): Promise<void> => deleteRecord('kurumlar', id);
+// Kurumlar - moved to end of file
 
 // === YENİ TABLOLAR İÇİN API FONKSİYONLARI ===
 
@@ -642,3 +780,21 @@ export const deleteDonationCampaign = async (id: string): Promise<void> => {
     const { error } = await supabase.from('donation_campaigns').delete().eq('id', id);
     if (error) handleSupabaseError(error, `delete donation campaign ${id}`);
 };
+
+// Kurumlar
+export const getKurumlar = (): Promise<Kurum[]> => getAll<Kurum>('kurumlar');
+export const getKurumById = (id: number): Promise<Kurum> => getById<Kurum>('kurumlar', id);
+export const createKurum = (kurum: Omit<Kurum, 'id'>): Promise<Kurum> => createRecord<Kurum>('kurumlar', kurum);
+export const updateKurum = (id: number, kurum: Partial<Kurum>): Promise<Kurum> => updateRecord<Kurum>('kurumlar', id, kurum);
+export const deleteKurum = (id: number): Promise<void> => deleteRecord('kurumlar', id);
+
+// Yardım Talepleri
+export const getYardimTalepleri = (): Promise<YardimTalebi[]> => getAll<YardimTalebi>('yardim_talepleri');
+export const getYardimTalebiById = (id: string): Promise<YardimTalebi> => {
+    return getById<YardimTalebi>('yardim_talepleri', id as any);
+};
+export const createYardimTalebi = (talep: Omit<YardimTalebi, 'id'>): Promise<YardimTalebi> => createRecord<YardimTalebi>('yardim_talepleri', talep);
+export const updateYardimTalebi = (id: string, talep: Partial<YardimTalebi>): Promise<YardimTalebi> => {
+    return updateRecord<YardimTalebi>('yardim_talepleri', id, talep);
+};
+export const deleteYardimTalebi = (id: string): Promise<void> => deleteRecord('yardim_talepleri', id);

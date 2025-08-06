@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { Bagis, BagisTuru, Person, Proje } from '../types';
 import { createBagis, updateBagis, deleteBagis } from '../services/apiService';
@@ -7,6 +7,10 @@ import { usePDFGenerator } from '../src/hooks/usePDFGenerator';
 import { useExcelUtils } from '../src/hooks/useExcelUtils';
 import Modal from './Modal';
 import { PageHeader, StatCard, Table, Input, Select, Textarea, Button } from './ui';
+import AdvancedFilter from '../src/components/AdvancedFilter';
+import SmartSearch from '../src/components/SmartSearch';
+import { formatCurrency, formatDate } from '../utils/format';
+import { filterItems, sortItems } from '../utils/list';
 
 interface BagisYonetimiProps {
     initialFilter?: BagisTuru | 'all';
@@ -25,43 +29,92 @@ const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) 
     } = useExcelUtils();
 
     const [filters, setFilters] = useState({ searchTerm: '', typeFilter: initialFilter });
+    const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
     const [editingDonation, setEditingDonation] = useState<Partial<Bagis> | null>(null);
     const [receiptDonation, setReceiptDonation] = useState<Bagis | null>(null);
 
-    const peopleMap = useMemo(() => new Map(people.map(p => [p.id, `${p.ad} ${p.soyad}`])), [people]);
-    const projectsMap = useMemo(() => new Map(projects.map(p => [p.id, p.name])), [projects]);
+    const peopleMap = useMemo(() => new Map(people.map(p => [String(p.id), `${(p as any).ad ?? p.first_name ?? ''} ${(p as any).soyad ?? p.last_name ?? ''}`.trim()])), [people]);
+    const projectsMap = useMemo(() => new Map(projects.map(p => [String(p.id), p.name])), [projects]);
+
+    // Sayfalama durumu
+    const [page, setPage] = useState(1);
+    const pageSize = 20;
+
+    // Arama debouncing
+    useEffect(() => {
+        const t = setTimeout(() => {
+            setDebouncedQuery(filters.searchTerm || '');
+        }, 300);
+        return () => clearTimeout(t);
+    }, [filters.searchTerm]);
 
     const { filteredDonations, monthlyTotal, donorCount, averageDonation } = useMemo(() => {
         const now = new Date();
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        
-        let currentMonthlyTotal = 0;
-        
-        donations.forEach(d => {
-            if (new Date(d.tarih) >= firstDayOfMonth) {
-                currentMonthlyTotal += d.tutar;
-            }
-        });
+
+        const monthlyTotalCalc = donations
+            .filter(d => new Date(d.tarih) >= firstDayOfMonth)
+            .reduce((sum, d) => sum + (d.tutar ?? 0), 0);
 
         const allDonors = new Set(donations.map(d => d.bagisciId));
-        
-        const filtered = donations.filter(d => {
-            const donorName = peopleMap.get(d.bagisciId)?.toLowerCase() || '';
-            const matchesSearch = donorName.includes(filters.searchTerm.toLowerCase()) || d.makbuzNo.toLowerCase().includes(filters.searchTerm.toLowerCase());
+
+        const filtered = filterItems(donations, (d) => {
+            const donorName = (peopleMap.get(String(d.bagisciId)) || '').toLowerCase();
+            const query = (debouncedQuery || '').toLowerCase();
+            const matchesSearch = !query || donorName.includes(query) || (d.makbuzNo || '').toLowerCase().includes(query);
             const matchesType = filters.typeFilter === 'all' || d.bagisTuru === filters.typeFilter;
             return matchesSearch && matchesType;
         });
 
+        const sorted = sortItems(filtered, (a, b) => new Date(b.tarih).getTime() - new Date(a.tarih).getTime());
+
         return {
-            filteredDonations: filtered,
-            monthlyTotal: currentMonthlyTotal,
+            filteredDonations: sorted,
+            monthlyTotal: monthlyTotalCalc,
             donorCount: allDonors.size,
-            averageDonation: donations.length > 0 ? (donations.reduce((acc, curr) => acc + curr.tutar, 0) / donations.length) : 0
+            averageDonation: donations.length > 0 ? (donations.reduce((acc, curr) => acc + (curr.tutar ?? 0), 0) / donations.length) : 0
         };
-    }, [donations, filters, peopleMap]);
+    }, [donations, debouncedQuery, filters.typeFilter, peopleMap]);
+
+    // Sanallaştırma: bağımlılıksız windowing (Table bileşeni yerine yalın liste render)
+    const containerRef = useRef<HTMLDivElement>(null);
+    const rowHeight = 56; // px, satır başı yükseklik
+    const overscan = 8;
+
+    const [scrollTop, setScrollTop] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(600);
+
+    const onScroll = useCallback(() => {
+        if (!containerRef.current) return;
+        setScrollTop(containerRef.current.scrollTop);
+    }, []);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const handleResize = () => setViewportHeight(el.clientHeight);
+        handleResize();
+        el.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', handleResize);
+        return () => {
+            el.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [onScroll]);
+
+    const total = filteredDonations.length;
+    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+    const endIndex = Math.min(
+        total,
+        Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan
+    );
+    const virtualItems = filteredDonations.slice(startIndex, endIndex);
+    const topSpacer = startIndex * rowHeight;
+    const bottomSpacer = (total - endIndex) * rowHeight;
 
     const handleSaveDonation = async (donationToSave: Partial<Bagis>) => {
         const isNew = !donationToSave.id;
@@ -117,11 +170,11 @@ const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) 
     };
 
     const columns = useMemo(() => [
-        { key: 'bagisciId', title: 'Bağışçı', render: (d: Bagis) => peopleMap.get(d.bagisciId) || 'Bilinmeyen Kişi' },
-        { key: 'tutar', title: 'Tutar', render: (d: Bagis) => <span className="font-semibold text-green-600">{d.tutar.toLocaleString('tr-TR', { style: 'currency', currency: d.paraBirimi })}</span> },
+        { key: 'bagisciId', title: 'Bağışçı', render: (d: Bagis) => peopleMap.get(String(d.bagisciId)) || 'Bilinmeyen Kişi' },
+        { key: 'tutar', title: 'Tutar', render: (d: Bagis) => <span className="font-semibold text-green-600">{formatCurrency(d.tutar ?? 0, d.paraBirimi || 'TRY')}</span> },
         { key: 'bagisTuru', title: 'Tür', render: (d: Bagis) => d.bagisTuru },
-        { key: 'tarih', title: 'Tarih', render: (d: Bagis) => new Date(d.tarih).toLocaleDateString('tr-TR') },
-        { key: 'projeId', title: 'İlişkili Proje', render: (d: Bagis) => d.projeId ? projectsMap.get(d.projeId) : '-' },
+        { key: 'tarih', title: 'Tarih', render: (d: Bagis) => formatDate(d.tarih) },
+        { key: 'projeId', title: 'İlişkili Proje', render: (d: Bagis) => (d && typeof d.projeId !== 'undefined' && d.projeId !== null) ? (projectsMap.get(String(d.projeId)) || '-') : '-' },
         { key: 'actions', title: 'İşlemler', render: (d: Bagis) => (
              <div className="flex items-center justify-end space-x-1">
                 <Button variant="ghost" size="sm" onClick={() => { setReceiptDonation(d); setIsReceiptModalOpen(true); }}>Makbuz</Button>
@@ -182,16 +235,127 @@ const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) 
             </PageHeader>
             <div className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <StatCard title="Bu Ayki Toplam Bağış" value={monthlyTotal.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="success" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" /></svg>} />
+                    <StatCard title="Bu Ayki Toplam Bağış" value={formatCurrency(monthlyTotal ?? 0, 'TRY')} color="success" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" /></svg>} />
                     <StatCard title="Toplam Bağışçı Sayısı" value={donorCount.toString()} color="primary" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-2.308l.143-.143-1.05-1.05a2.25 2.25 0 0 1-1.586-.858c-.035-.052-.072-.105-.108-.158l-1.3-1.3a2.25 2.25 0 0 0-3.182 0l-1.3 1.3a2.25 2.25 0 0 1-1.585.858l-1.05 1.05a9.337 9.337 0 0 0 4.121 2.308M15 19.128v-2.828l-1.3-1.3a2.25 2.25 0 0 0-3.182 0l-1.3 1.3a2.25 2.25 0 0 1-1.585.858l-1.05 1.05a9.337 9.337 0 0 0 4.121 2.308M12 6.75a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Zm0 0a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-4.5 0a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Zm0 0a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm9 0a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Zm0 0a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" /></svg>} />
-                    <StatCard title="Ortalama Bağış Miktarı" value={averageDonation.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="warning" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>} />
+                    <StatCard title="Ortalama Bağış Miktarı" value={formatCurrency(averageDonation ?? 0, 'TRY')} color="warning" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>} />
                 </div>
                 <div className="bg-white dark:bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <Input type="text" placeholder="Bağışçı adı veya makbuz no..." value={filters.searchTerm} onChange={e => setFilters(f => ({...f, searchTerm: e.target.value}))} />
-                        <Select value={filters.typeFilter} onChange={e => setFilters(f => ({...f, typeFilter: e.target.value as any}))} options={[{value: 'all', label: 'Tüm Bağış Türleri'}, ...Object.values(BagisTuru).map(tur => ({value: tur, label: tur}))]} />
+                    {/* Akıllı Arama */}
+                    <SmartSearch
+                        onSearch={(query) => setFilters(f => ({ ...f, searchTerm: query }))}
+                        placeholder="Akıllı arama: 'büyük bağışlar' veya 'Ahmet' gibi sorguları deneyin..."
+                        className="mb-4"
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <Select value={filters.typeFilter} onChange={e => { setPage(1); setFilters(f => ({...f, typeFilter: e.target.value as any}))}} options={[{value: 'all', label: 'Tüm Bağış Türleri'}, ...Object.values(BagisTuru).map(tur => ({value: tur, label: tur}))]} />
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                            className="flex items-center gap-2"
+                        >
+                            Gelişmiş Filtreler
+                        </Button>
                     </div>
-                    <Table columns={columns} data={filteredDonations} />
+                    
+                    {/* Gelişmiş Filtreler */}
+                    {showAdvancedFilters && (
+                        <AdvancedFilter
+                             filters={filters}
+                             onFiltersChange={setFilters}
+                             onClearAll={() => setFilters({ searchTerm: '', typeFilter: 'all' })}
+                            filterOptions={[
+                                {
+                                    key: 'bagisTuru',
+                                    label: 'Bağış Türü',
+                                    type: 'select',
+                                    options: Object.values(BagisTuru).map(tur => ({ value: tur, label: tur }))
+                                },
+                                {
+                                    key: 'amountMin',
+                                    label: 'Minimum Tutar',
+                                    type: 'number',
+                                    placeholder: 'Min tutar'
+                                },
+                                {
+                                    key: 'amountMax',
+                                    label: 'Maksimum Tutar',
+                                    type: 'number',
+                                    placeholder: 'Max tutar'
+                                },
+                                {
+                                    key: 'dateFrom',
+                                    label: 'Başlangıç Tarihi',
+                                    type: 'date'
+                                },
+                                {
+                                    key: 'dateTo',
+                                    label: 'Bitiş Tarihi',
+                                    type: 'date'
+                                }
+                            ]}
+                            className="mb-4"
+                        />
+                    )}
+                    
+                    {/* Sanallaştırılmış tablo görünümü */}
+                    <div className="mt-4 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <div
+                                ref={containerRef}
+                                className="max-h-[70vh] overflow-y-auto"
+                                aria-label="Bağışlar Scroll Container"
+                            >
+                                <table className="w-full text-sm text-left text-zinc-600 dark:text-zinc-300">
+                                    <thead className="sticky top-0 z-10 text-xs text-zinc-700 dark:text-zinc-300 uppercase bg-zinc-50 dark:bg-zinc-800">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold">Bağışçı</th>
+                                            <th className="px-4 py-3 font-semibold">Tutar</th>
+                                            <th className="px-4 py-3 font-semibold">Tür</th>
+                                            <th className="px-4 py-3 font-semibold">Tarih</th>
+                                            <th className="px-4 py-3 font-semibold">İlişkili Proje</th>
+                                            <th className="px-4 py-3 font-semibold text-right">İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+                                        {topSpacer > 0 && (
+                                            <tr style={{ height: topSpacer }}>
+                                                <td colSpan={6} />
+                                            </tr>
+                                        )}
+
+                                        {virtualItems.map((d) => (
+                                            <tr key={d.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50" style={{ height: rowHeight }}>
+                                                <td className="px-4 py-3">{peopleMap.get(String(d.bagisciId)) || 'Bilinmeyen Kişi'}</td>
+                                                <td className="px-4 py-3"><span className="font-semibold text-green-600">{formatCurrency(d.tutar ?? 0, d.paraBirimi || 'TRY')}</span></td>
+                                                <td className="px-4 py-3">{d.bagisTuru}</td>
+                                                <td className="px-4 py-3">{formatDate(d.tarih)}</td>
+                                                <td className="px-4 py-3">{(d && typeof d.projeId !== 'undefined' && d.projeId !== null) ? (projectsMap.get(String(d.projeId)) || '-') : '-'}</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end space-x-1">
+                                                        <Button variant="ghost" size="sm" onClick={() => { setReceiptDonation(d); setIsReceiptModalOpen(true); }}>Makbuz</Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingDonation(d); setIsFormModalOpen(true); }}>Düzenle</Button>
+                                                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteClick(d.id)}>Sil</Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+
+                                        {bottomSpacer > 0 && (
+                                            <tr style={{ height: bottomSpacer }}>
+                                                <td colSpan={6} />
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {filteredDonations.length === 0 && (
+                            <div className="text-center py-10 text-zinc-500">
+                                <p>Gösterilecek bağış kaydı bulunamadı.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -207,7 +371,7 @@ const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) 
             {isReceiptModalOpen && receiptDonation && (
                 <MakbuzModal
                     donation={receiptDonation}
-                    donorName={peopleMap.get(receiptDonation.bagisciId) || 'Bilinmeyen Kişi'}
+                    donorName={peopleMap.get(String(receiptDonation.bagisciId)) || 'Bilinmeyen Kişi'}
                     onClose={() => setIsReceiptModalOpen(false)}
                 />
             )}

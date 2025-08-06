@@ -106,7 +106,7 @@ const VefaDestekYonetimi: React.FC = () => {
                     <Select value={filters.typeFilter} onChange={e => setFilters(f => ({...f, typeFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Destek Türleri'}, ...Object.values(VefaDestekTuru).map(v=>({value:v,label:v}))]} />
                     <Select value={filters.statusFilter} onChange={e => setFilters(f => ({...f, statusFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Destek Durumları'}, ...Object.values(VefaDestekDurumu).map(v=>({value:v,label:v}))]} />
                 </div>
-                <Table columns={columns} data={filteredVefaList} />
+                <Table<VefaDestek> columns={columns} data={filteredVefaList} />
             </div>
             
             {isModalOpen && editingVefa && (

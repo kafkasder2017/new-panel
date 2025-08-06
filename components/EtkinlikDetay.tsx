@@ -34,7 +34,7 @@ const EtkinlikDetay: React.FC = () => {
     const { etkinlikId } = ReactRouterDOM.useParams<{ etkinlikId: string }>();
     const [etkinlik, setEtkinlik] = useState<Etkinlik | null>(null);
     const [gonulluler, setGonulluler] = useState<EnrichedGonullu[]>([]);
-    const [peopleMap, setPeopleMap] = useState<Map<number, Person>>(new Map());
+    const [peopleMap, setPeopleMap] = useState<Map<string, Person>>(new Map());
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -57,7 +57,7 @@ const EtkinlikDetay: React.FC = () => {
 
                 const localPeopleMap = new Map(peopleData.map(p => [p.id, p]));
                 const enrichedVolunteers = volunteersData
-                    .map(g => ({ ...g, person: localPeopleMap.get(g.personId) }))
+                    .map(g => ({ ...g, person: localPeopleMap.get(String(g.personId)) }))
                     .filter(g => g.person) as EnrichedGonullu[];
 
                 setEtkinlik(eventData);
@@ -100,7 +100,7 @@ const EtkinlikDetay: React.FC = () => {
             </div>
         );
     }
-    const sorumlu = peopleMap.get(etkinlik.sorumluId);
+    const sorumlu = peopleMap.get(String(etkinlik.sorumluId));
 
     return (
         <div className="space-y-6">
@@ -130,7 +130,7 @@ const EtkinlikDetay: React.FC = () => {
                 {etkinlik.katilimcilar && etkinlik.katilimcilar.length > 0 ? (
                     <ul className="divide-y divide-zinc-200 dark:divide-zinc-700">
                         {etkinlik.katilimcilar.map(katilimci => {
-                            const person = peopleMap.get(katilimci.personId);
+                            const person = peopleMap.get(String(katilimci.personId));
                             if (!person) return null;
                             return (
                                 <li key={katilimci.personId} className="flex items-center justify-between py-3">

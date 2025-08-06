@@ -2,7 +2,18 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Person, PersonStatus, MembershipType, Uyruk, KimlikTuru, YardimTuruDetay, SavedView, KullaniciRol, SponsorlukTipi, DosyaBaglantisi, RizaBeyaniStatus } from '../types.ts';
+import { Person, PersonStatus, MembershipType, Uyruk, KimlikTuru, YardimTuruDetay, KullaniciRol, SponsorlukTipi, DosyaBaglantisi, RizaBeyaniStatus } from '../types.ts';
+import KisiToolbar from './kisi/KisiToolbar';
+import KisiFilters, { KisiFiltersState } from './kisi/KisiFilters';
+import KisiTable from './kisi/KisiTable';
+import KisiSelectionBar from './kisi/KisiSelectionBar';
+
+interface SavedView {
+    id: string;
+    name: string;
+    filters: any;
+    createdAt: string;
+}
 import { createPerson, updatePerson, deletePerson, deletePeople } from '../services/apiService.ts';
 import { usePeople } from '../hooks/useData.ts';
 import { usePDFGenerator } from '../src/hooks/usePDFGenerator';
@@ -22,9 +33,17 @@ const getStatusClass = (status: PersonStatus) => {
 const KisiFormModal: React.FC<{
     person: Partial<Person> | null,
     onClose: () => void,
-    onSave: (person: Partial<Person>) => void
-}> = ({ person, onClose, onSave }) => {
-    const [formData, setFormData] = useState<Partial<Person>>(person || { aldigiYardimTuru: [], uyruk: [] });
+    onSave: (person: Partial<Person>) => void,
+    isCameraModalOpen: boolean,
+    setIsCameraModalOpen: (open: boolean) => void,
+    onCameraCapture: (imageData: string) => void
+}> = ({ person, onClose, onSave, isCameraModalOpen, setIsCameraModalOpen, onCameraCapture }) => {
+    const [formData, setFormData] = useState<Partial<Person>>(person || {});
+    
+    // person prop'u değiştiğinde formData'yı güncelle
+    React.useEffect(() => {
+        setFormData(person || {});
+    }, [person]);
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -51,31 +70,155 @@ const KisiFormModal: React.FC<{
     return (
         <>
             <Modal isOpen={true} onClose={onClose} title={isNew ? 'Yeni Kişi Ekle' : 'Kişi Bilgilerini Düzenle'}>
+                {/* Kamera ile Tara Butonu */}
+                <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h4 className="text-sm font-medium text-purple-900 dark:text-purple-100">Hızlı Veri Girişi</h4>
+                            <p className="text-xs text-purple-700 dark:text-purple-300">Kimlik kartını kamera ile tarayarak bilgileri otomatik doldurun</p>
+                        </div>
+                        <button 
+                            type="button"
+                            onClick={() => setIsCameraModalOpen(true)} 
+                            className="bg-purple-600 text-white px-3 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center space-x-2 text-sm"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                            </svg>
+                            <span>Kamera ile Tara</span>
+                        </button>
+                    </div>
+                </div>
+                
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Ad</label>
-                            <input type="text" name="ad" value={formData.ad || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
+                            <input type="text" name="first_name" value={formData.first_name || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Soyad</label>
-                            <input type="text" name="soyad" value={formData.soyad || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
+                            <input type="text" name="last_name" value={formData.last_name || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Kimlik Numarası</label>
-                            <input type="text" name="kimlikNo" value={formData.kimlikNo || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
+                            <input type="text" name="identity_number" value={formData.identity_number || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Cep Telefonu</label>
-                            <input type="tel" name="cepTelefonu" value={formData.cepTelefonu || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
+                            <input type="tel" name="phone" value={formData.phone || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
                         </div>
                         <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Adres</label>
-                            <textarea name="adres" value={formData.adres || ''} onChange={handleChange} rows={2} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
+                            <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-3">Adres Bilgileri</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Ülke</label>
+                                    <select name="country" value={formData.country || 'Türkiye'} onChange={handleChange} className="block w-full p-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700">
+                                        <option value="Türkiye">Türkiye</option>
+                                        <option value="Suriye">Suriye</option>
+                                        <option value="Irak">Irak</option>
+                                        <option value="Afganistan">Afganistan</option>
+                                        <option value="Diğer">Diğer</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">İl</label>
+                                    <select name="city" value={formData.city || ''} onChange={handleChange} className="block w-full p-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700">
+                                        <option value="">Seçiniz...</option>
+                                        <option value="İstanbul">İstanbul</option>
+                                        <option value="Ankara">Ankara</option>
+                                        <option value="İzmir">İzmir</option>
+                                        <option value="Bursa">Bursa</option>
+                                        <option value="Antalya">Antalya</option>
+                                        <option value="Adana">Adana</option>
+                                        <option value="Konya">Konya</option>
+                                        <option value="Gaziantep">Gaziantep</option>
+                                        <option value="Mersin">Mersin</option>
+                                        <option value="Kayseri">Kayseri</option>
+                                        <option value="Eskişehir">Eskişehir</option>
+                                        <option value="Diyarbakır">Diyarbakır</option>
+                                        <option value="Samsun">Samsun</option>
+                                        <option value="Denizli">Denizli</option>
+                                        <option value="Şanlıurfa">Şanlıurfa</option>
+                                        <option value="Adapazarı">Adapazarı</option>
+                                        <option value="Malatya">Malatya</option>
+                                        <option value="Kahramanmaraş">Kahramanmaraş</option>
+                                        <option value="Erzurum">Erzurum</option>
+                                        <option value="Van">Van</option>
+                                        <option value="Batman">Batman</option>
+                                        <option value="Elazığ">Elazığ</option>
+                                        <option value="Iğdır">Iğdır</option>
+                                        <option value="Trabzon">Trabzon</option>
+                                        <option value="Balıkesir">Balıkesir</option>
+                                        <option value="Manisa">Manisa</option>
+                                        <option value="Tokat">Tokat</option>
+                                        <option value="Çorum">Çorum</option>
+                                        <option value="Kırıkkale">Kırıkkale</option>
+                                        <option value="Afyon">Afyon</option>
+                                        <option value="Isparta">Isparta</option>
+                                        <option value="Zonguldak">Zonguldak</option>
+                                        <option value="Amasya">Amasya</option>
+                                        <option value="Çanakkale">Çanakkale</option>
+                                        <option value="Kırşehir">Kırşehir</option>
+                                        <option value="Muğla">Muğla</option>
+                                        <option value="Nevşehir">Nevşehir</option>
+                                        <option value="Tekirdağ">Tekirdağ</option>
+                                        <option value="Aydın">Aydın</option>
+                                        <option value="Mardin">Mardin</option>
+                                        <option value="Ordu">Ordu</option>
+                                        <option value="Osmaniye">Osmaniye</option>
+                                        <option value="Kütahya">Kütahya</option>
+                                        <option value="Rize">Rize</option>
+                                        <option value="Siirt">Siirt</option>
+                                        <option value="Uşak">Uşak</option>
+                                        <option value="Düzce">Düzce</option>
+                                        <option value="Edirne">Edirne</option>
+                                        <option value="Kırklareli">Kırklareli</option>
+                                        <option value="Yozgat">Yozgat</option>
+                                        <option value="Çankırı">Çankırı</option>
+                                        <option value="Giresun">Giresun</option>
+                                        <option value="Ağrı">Ağrı</option>
+                                        <option value="Bingöl">Bingöl</option>
+                                        <option value="Bitlis">Bitlis</option>
+                                        <option value="Hakkari">Hakkari</option>
+                                        <option value="Muş">Muş</option>
+                                        <option value="Şırnak">Şırnak</option>
+                                        <option value="Tunceli">Tunceli</option>
+                                        <option value="Artvin">Artvin</option>
+                                        <option value="Gümüşhane">Gümüşhane</option>
+                                        <option value="Kilis">Kilis</option>
+                                        <option value="Bayburt">Bayburt</option>
+                                        <option value="Karabük">Karabük</option>
+                                        <option value="Karaman">Karaman</option>
+                                        <option value="Kırıkkale">Kırıkkale</option>
+                                        <option value="Bartın">Bartın</option>
+                                        <option value="Ardahan">Ardahan</option>
+                                        <option value="Iğdır">Iğdır</option>
+                                        <option value="Yalova">Yalova</option>
+                                        <option value="Karabük">Karabük</option>
+                                        <option value="Kilis">Kilis</option>
+                                        <option value="Osmaniye">Osmaniye</option>
+                                        <option value="Düzce">Düzce</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">İlçe</label>
+                                    <input type="text" name="district" value={formData.district || ''} onChange={handleChange} placeholder="İlçe adını yazın" className="block w-full p-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Mahalle</label>
+                                    <input type="text" name="neighborhood" value={formData.neighborhood || ''} onChange={handleChange} placeholder="Mahalle adını yazın" className="block w-full p-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Cadde</label>
+                                    <input type="text" name="address" value={formData.address || ''} onChange={handleChange} placeholder="Adres bilgisini yazın" className="block w-full p-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg" />
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Durum</label>
-                            <select name="durum" value={formData.durum || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700" required>
+                            <select name="status" value={formData.status || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700" required>
                                 <option value="" disabled>Seçiniz...</option>
                                 {Object.values(PersonStatus).map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
@@ -87,6 +230,14 @@ const KisiFormModal: React.FC<{
                         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">Kaydet</button>
                     </div>
                 </form>
+                
+                {/* Kamera Modal */}
+                {isCameraModalOpen && (
+                    <CameraCaptureModal
+                        onClose={() => setIsCameraModalOpen(false)}
+                        onCapture={onCameraCapture}
+                    />
+                )}
             </Modal>
         </>
     );
@@ -104,39 +255,109 @@ const KisiYonetimi: React.FC = () => {
         isImporting 
     } = useExcelUtils();
 
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<KisiFiltersState>({
         searchTerm: '',
-        statusFilter: 'all' as PersonStatus | 'all',
-        nationalityFilter: 'all' as Uyruk | 'all',
-        yardimTuruFilter: 'all' as YardimTuruDetay | 'all',
+        statusFilter: 'all',
+        nationalityFilter: 'all',
+        yardimTuruFilter: 'all',
+        cityFilter: '',
+        ageRangeMin: '',
+        ageRangeMax: '',
+        registrationDateFrom: '',
+        registrationDateTo: '',
+        membershipTypeFilter: 'all',
+        multipleStatusFilter: [],
+        multipleNationalityFilter: [],
     });
+    
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+    const [currentViewName, setCurrentViewName] = useState('');
+    const [showSaveViewModal, setShowSaveViewModal] = useState(false);
     
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingPerson, setEditingPerson] = useState<Partial<Person> | null>(null);
-    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
     const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
     const displayedData = useMemo(() => {
         return people.filter(person => {
-            const matchesSearch = `${person.ad} ${person.soyad}`.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-                person.kimlikNo.includes(filters.searchTerm);
-            const matchesStatus = filters.statusFilter === 'all' || person.durum === filters.statusFilter;
-            const matchesNationality = filters.nationalityFilter === 'all' || person.uyruk.includes(filters.nationalityFilter as Uyruk);
-            const matchesYardimTuru = filters.yardimTuruFilter === 'all' || person.aldigiYardimTuru?.includes(filters.yardimTuruFilter as YardimTuruDetay);
+            // Temel arama
+            const matchesSearch = filters.searchTerm === '' || 
+                `${person.first_name} ${person.last_name}`.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                person.identity_number?.includes(filters.searchTerm) ||
+                person.phone?.includes(filters.searchTerm) ||
+                person.address?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                person.country?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                person.city?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                person.district?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                person.neighborhood?.toLowerCase().includes(filters.searchTerm.toLowerCase());
+            
+            // Durum filtreleri
+            const matchesStatus = filters.statusFilter === 'all' || person.status === filters.statusFilter;
+            const matchesMultipleStatus = filters.multipleStatusFilter.length === 0 || 
+                filters.multipleStatusFilter.includes(person.status);
+            
+            // Uyruk filtreleri
+            const matchesNationality = filters.nationalityFilter === 'all' || 
+                person.nationality?.includes(filters.nationalityFilter as Uyruk);
+            const matchesMultipleNationality = filters.multipleNationalityFilter.length === 0 || 
+                filters.multipleNationalityFilter.some(nat => person.nationality?.includes(nat));
+            
+            // Yardım türü filtresi
+            const matchesYardimTuru = filters.yardimTuruFilter === 'all' || 
+                person.aid_type_received?.includes(filters.yardimTuruFilter as YardimTuruDetay);
+            
+            // İl filtresi
+            const matchesCity = filters.cityFilter === '' || 
+                person.city?.toLowerCase().includes(filters.cityFilter.toLowerCase());
+            
+            // Üyelik türü filtresi
+            const matchesMembershipType = filters.membershipTypeFilter === 'all' || 
+                person.membershipType === filters.membershipTypeFilter;
+            
+            // Yaş aralığı filtresi
+            let matchesAgeRange = true;
+            if (filters.ageRangeMin || filters.ageRangeMax) {
+                const birthDate = new Date(person.birth_date || '1900-01-01');
+                const age = new Date().getFullYear() - birthDate.getFullYear();
+                
+                if (filters.ageRangeMin && age < parseInt(filters.ageRangeMin)) {
+                    matchesAgeRange = false;
+                }
+                if (filters.ageRangeMax && age > parseInt(filters.ageRangeMax)) {
+                    matchesAgeRange = false;
+                }
+            }
+            
+            // Kayıt tarihi aralığı filtresi
+            let matchesRegistrationDate = true;
+            if (filters.registrationDateFrom || filters.registrationDateTo) {
+                const registrationDate = new Date(person.registration_date || '1900-01-01');
+                
+                if (filters.registrationDateFrom) {
+                    const fromDate = new Date(filters.registrationDateFrom);
+                    if (registrationDate < fromDate) {
+                        matchesRegistrationDate = false;
+                    }
+                }
+                if (filters.registrationDateTo) {
+                    const toDate = new Date(filters.registrationDateTo);
+                    toDate.setHours(23, 59, 59, 999); // Günün sonuna kadar
+                    if (registrationDate > toDate) {
+                        matchesRegistrationDate = false;
+                    }
+                }
+            }
 
-            return matchesSearch && matchesStatus && matchesNationality && matchesYardimTuru;
+            return matchesSearch && matchesStatus && matchesMultipleStatus && 
+                   matchesNationality && matchesMultipleNationality && matchesYardimTuru && 
+                   matchesCity && matchesMembershipType && matchesAgeRange && matchesRegistrationDate;
         });
     }, [people, filters]);
 
-    useEffect(() => {
-        if (headerCheckboxRef.current) {
-            const numSelected = selectedIds.length;
-            const numDisplayed = displayedData.length;
-            headerCheckboxRef.current.checked = numSelected > 0 && numSelected === numDisplayed;
-            headerCheckboxRef.current.indeterminate = numSelected > 0 && numSelected < numDisplayed;
-        }
-    }, [selectedIds, displayedData]);
+    // headerCheckbox kontrolü tablo bileşenine taşındı
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -147,7 +368,7 @@ const KisiYonetimi: React.FC = () => {
         }
     };
 
-    const handleSelectOne = (id: number) => {
+    const handleSelectOne = (id: string) => {
         setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]
         );
@@ -200,21 +421,23 @@ const KisiYonetimi: React.FC = () => {
                 } else { // Creating
                     const payload = {
                         ...personToSave,
-                        kayitTarihi: new Date().toISOString(),
-                        kaydiAcanBirim: "Panel",
-                        dosyaBaglantisi: DosyaBaglantisi.DERNEK,
-                        isKaydiSil: false,
-                        uyruk: personToSave.uyruk || [Uyruk.TC],
-                        kimlikTuru: personToSave.kimlikTuru || KimlikTuru.TC,
-                        dogumTarihi: personToSave.dogumTarihi || '1900-01-01',
-                        ulke: personToSave.ulke || 'Türkiye',
-                        sehir: personToSave.sehir || '',
-                        yerlesim: personToSave.yerlesim || '',
-                        mahalle: personToSave.mahalle || '',
-                        dosyaNumarasi: personToSave.dosyaNumarasi || `DN${Date.now()}`,
-                        sponsorlukTipi: personToSave.sponsorlukTipi || SponsorlukTipi.YOK,
-                        kayitDurumu: personToSave.kayitDurumu || 'Kaydedildi',
-                        rizaBeyani: personToSave.rizaBeyani || RizaBeyaniStatus.ALINDI
+                        registration_date: new Date().toISOString(),
+                        registering_unit: "Panel",
+                        file_connection: DosyaBaglantisi.DERNEK,
+                        is_record_deleted: false,
+                        nationality: personToSave.nationality || [Uyruk.TC],
+                        identity_type: personToSave.identity_type || KimlikTuru.TC,
+                        birth_date: personToSave.birth_date || '1900-01-01',
+                        country: personToSave.country || 'Türkiye',
+                        city: personToSave.city || '',
+                        district: personToSave.district || '',
+                        neighborhood: personToSave.neighborhood || '',
+                        street: (personToSave as any).street || '',
+                        avenue: (personToSave as any).avenue || '',
+                        file_number: personToSave.file_number || `DN${Date.now()}`,
+                        sponsorship_type: personToSave.sponsorship_type || SponsorlukTipi.YOK,
+                        registration_status: personToSave.registration_status || 'Kaydedildi',
+                        consent_statement: personToSave.consent_statement || RizaBeyaniStatus.ALINDI
                     } as Omit<Person, 'id'>;
                     await createPerson(payload);
                 }
@@ -235,7 +458,7 @@ const KisiYonetimi: React.FC = () => {
         });
     };
     
-    const handleDeletePerson = async (id: number) => {
+    const handleDeletePerson = async (id: string) => {
         if (window.confirm("Bu kişiyi silmek istediğinizden emin misiniz?")) {
             const promise = deletePerson(id);
             
@@ -254,6 +477,77 @@ const KisiYonetimi: React.FC = () => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
+    
+    const handleMultipleFilterChange = (filterName: 'multipleStatusFilter' | 'multipleNationalityFilter', value: PersonStatus | Uyruk) => {
+        setFilters(prev => {
+            const currentValues = prev[filterName] as any[];
+            const newValues = currentValues.includes(value)
+                ? currentValues.filter(v => v !== value)
+                : [...currentValues, value];
+            return { ...prev, [filterName]: newValues };
+        });
+    };
+    
+    const clearAllFilters = () => {
+        setFilters({
+            searchTerm: '',
+            statusFilter: 'all',
+            nationalityFilter: 'all',
+            yardimTuruFilter: 'all',
+            cityFilter: '',
+            ageRangeMin: '',
+            ageRangeMax: '',
+            registrationDateFrom: '',
+            registrationDateTo: '',
+            membershipTypeFilter: 'all',
+            multipleStatusFilter: [],
+            multipleNationalityFilter: [],
+        });
+    };
+    
+    const saveCurrentView = () => {
+        if (!currentViewName.trim()) {
+            toast.error('Lütfen görünüm adı girin');
+            return;
+        }
+        
+        const newView: SavedView = {
+            id: Date.now().toString(),
+            name: currentViewName,
+            filters: { ...filters },
+            createdAt: new Date().toISOString()
+        };
+        
+        setSavedViews(prev => [...prev, newView]);
+        setCurrentViewName('');
+        setShowSaveViewModal(false);
+        toast.success('Görünüm kaydedildi!');
+    };
+    
+    const loadSavedView = (view: SavedView) => {
+        setFilters(view.filters);
+        toast.success(`"${view.name}" görünümü yüklendi`);
+    };
+    
+    const deleteSavedView = (viewId: string) => {
+        setSavedViews(prev => prev.filter(v => v.id !== viewId));
+        toast.success('Görünüm silindi');
+    };
+    
+    const getActiveFilterCount = () => {
+        let count = 0;
+        if (filters.searchTerm) count++;
+        if (filters.statusFilter !== 'all') count++;
+        if (filters.nationalityFilter !== 'all') count++;
+        if (filters.yardimTuruFilter !== 'all') count++;
+        if (filters.cityFilter) count++;
+        if (filters.ageRangeMin || filters.ageRangeMax) count++;
+        if (filters.registrationDateFrom || filters.registrationDateTo) count++;
+        if (filters.membershipTypeFilter !== 'all') count++;
+        if (filters.multipleStatusFilter.length > 0) count++;
+        if (filters.multipleNationalityFilter.length > 0) count++;
+        return count;
+    };
 
     const handleCameraCapture = (imageData: string) => {
         // Kamera ile çekilen fotoğrafı işle
@@ -263,17 +557,22 @@ const KisiYonetimi: React.FC = () => {
         // Örnek: OCR sonucu ile form verilerini doldur
         // Bu kısım gerçek OCR entegrasyonu ile değiştirilmelidir
         const mockOcrResult = {
-            ad: 'Örnek',
-            soyad: 'Kişi',
-            kimlikNo: '12345678901',
-            dogumTarihi: '1990-01-01'
+            first_name: 'Örnek',
+            last_name: 'Kişi',
+            identity_number: '12345678901',
+            birth_date: '1990-01-01',
+            country: 'Türkiye',
+            city: 'İstanbul',
+            district: 'Kadıköy',
+            neighborhood: 'Fenerbahçe',
+            avenue: 'Bağdat Caddesi',
+            street: 'Örnek Sokak'
         };
         
-        setEditingPerson(mockOcrResult);
+        setEditingPerson(prev => ({ ...prev, ...mockOcrResult }));
         setIsCameraModalOpen(false);
-        setIsFormModalOpen(true);
         
-        toast.success('Kimlik bilgileri başarıyla okundu!');
+        toast.success('Kimlik ve adres bilgileri başarıyla okundu!');
     };
 
     if (isLoading) return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div></div>;
@@ -282,177 +581,91 @@ const KisiYonetimi: React.FC = () => {
     return (
         <>
             <div className="bg-white dark:bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
-                 <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 mb-4">
-                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Kişi Yönetimi</h2>
-                    <div className="flex items-center gap-2">
-                        <div className="relative">
-                            <input
-                                type="file"
-                                accept=".xlsx,.xls"
-                                onChange={handleImport}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                disabled={isImporting}
-                            />
-                            <button 
-                                disabled={isImporting}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-3-6 3 3m0 0-3 3m3-3H9" />
-                                </svg>
-                                <span>{isImporting ? 'İçe Aktarılıyor...' : 'Excel\'den İçe Aktar'}</span>
-                            </button>
-                        </div>
-                        <button 
-                            onClick={handleGenerateTemplate}
-                            className="bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-700 transition-colors flex items-center space-x-2"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M8.25 9h4.5M8.25 12h4.5m-4.5 3h4.5" />
-                            </svg>
-                            <span>Template İndir</span>
-                        </button>
-                         <button 
-                            onClick={handleExport} 
-                            disabled={isExporting || displayedData.length === 0}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
-                            <span>{isExporting ? 'Dışa Aktarılıyor...' : 'Excel\'e Aktar'}</span>
-                        </button>
-                        <button 
-                            onClick={() => generatePersonReport(displayedData)} 
-                            disabled={isGenerating || displayedData.length === 0}
-                            className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                            </svg>
-                            <span>{isGenerating ? 'PDF Oluşturuluyor...' : 'PDF Rapor'}</span>
-                        </button>
-                        <button onClick={() => { setEditingPerson({}); setIsFormModalOpen(true); }} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2">
-                             <span>Yeni Kişi Ekle</span>
-                        </button>
-                        <button onClick={() => setIsCameraModalOpen(true)} className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                            </svg>
-                            <span>Kamera ile Tara</span>
-                        </button>
-                    </div>
-                </div>
+                 <KisiToolbar
+                    isImporting={isImporting}
+                    isExporting={isExporting}
+                    isGenerating={isGenerating}
+                    hasData={displayedData.length > 0}
+                    onImport={handleImport}
+                    onTemplate={handleGenerateTemplate}
+                    onExport={handleExport}
+                    onPDF={() => generatePersonReport(displayedData)}
+                    onNew={() => { setEditingPerson({}); setIsFormModalOpen(true); }}
+                />
 
-                {selectedIds.length > 0 && (
-                    <div className="flex items-center justify-between p-3 my-4 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-                        <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{selectedIds.length} kişi seçildi</span>
-                        <div>
-                            <button
-                                onClick={handleDeleteSelected}
-                                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-700"
-                            >
-                                Seçilenleri Sil
-                            </button>
-                        </div>
-                    </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <input type="text" name="searchTerm" placeholder="Ad, Soyad, Kimlik No..." value={filters.searchTerm} onChange={handleFilterChange} className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700" />
-                    <select name="statusFilter" value={filters.statusFilter} onChange={handleFilterChange} className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700">
-                        <option value="all">Tüm Durumlar</option>
-                        {Object.values(PersonStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <select name="nationalityFilter" value={filters.nationalityFilter} onChange={handleFilterChange} className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700">
-                        <option value="all">Tüm Uyruklar</option>
-                         {Object.values(Uyruk).map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                     <select name="yardimTuruFilter" value={filters.yardimTuruFilter} onChange={handleFilterChange} className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700">
-                        <option value="all">Tüm Yardım Türleri</option>
-                         {Object.values(YardimTuruDetay).map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                </div>
-                
-                <div className="overflow-x-auto">
-                     <table className="w-full text-sm text-left text-zinc-500 dark:text-zinc-400">
-                        <thead className="text-xs text-zinc-700 dark:text-zinc-400 uppercase bg-zinc-50 dark:bg-zinc-700/50">
-                            <tr>
-                                <th scope="col" className="p-4">
-                                    <div className="flex items-center">
-                                        <input
-                                            id="checkbox-all"
-                                            type="checkbox"
-                                            ref={headerCheckboxRef}
-                                            onChange={handleSelectAll}
-                                            className="w-4 h-4 text-blue-600 bg-zinc-100 border-zinc-300 rounded focus:ring-blue-500 dark:focus:ring-offset-zinc-800 dark:bg-zinc-600 dark:border-zinc-500"
-                                        />
-                                        <label htmlFor="checkbox-all" className="sr-only">select all</label>
-                                    </div>
-                                </th>
-                                <th scope="col" className="px-6 py-4 font-semibold">Ad Soyad</th>
-                                <th scope="col" className="px-6 py-4 font-semibold">Kimlik No</th>
-                                <th scope="col" className="px-6 py-4 font-semibold">Uyruk</th>
-                                <th scope="col" className="px-6 py-4 font-semibold">Şehir</th>
-                                <th scope="col" className="px-6 py-4 font-semibold">Durum</th>
-                                <th scope="col" className="px-6 py-4 font-semibold text-right">İşlemler</th>
-                            </tr>
-                        </thead>
-                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
-                            {displayedData.map((person) => (
-                                <tr key={person.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                                    <td className="w-4 p-4">
-                                        <div className="flex items-center">
-                                            <input
-                                                id={`checkbox-${person.id}`}
-                                                type="checkbox"
-                                                checked={selectedIds.includes(person.id)}
-                                                onChange={() => handleSelectOne(person.id)}
-                                                className="w-4 h-4 text-blue-600 bg-zinc-100 border-zinc-300 rounded focus:ring-blue-500 dark:focus:ring-offset-zinc-800 dark:bg-zinc-600 dark:border-zinc-500"
-                                            />
-                                            <label htmlFor={`checkbox-${person.id}`} className="sr-only">select row</label>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{person.ad} {person.soyad}</td>
-                                    <td className="px-6 py-4">{person.kimlikNo}</td>
-                                    <td className="px-6 py-4">{person.uyruk.join(', ')}</td>
-                                    <td className="px-6 py-4">{person.sehir}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(person.durum)}`}>{person.durum}</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end space-x-4">
-                                            <ReactRouterDOM.Link to={`/kisiler/${person.id}`} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-semibold">Detay</ReactRouterDOM.Link>
-                                            <button onClick={() => { setEditingPerson(person); setIsFormModalOpen(true); }} className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 font-semibold">Düzenle</button>
-                                            <button onClick={() => handleDeletePerson(person.id)} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-semibold">Sil</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                 {displayedData.length === 0 && (
-                    <div className="text-center py-10 text-zinc-500">
-                        <p>Arama kriterlerine uygun kişi bulunamadı.</p>
-                    </div>
-                )}
+                <KisiSelectionBar
+                    count={selectedIds.length}
+                    onDeleteSelected={handleDeleteSelected}
+                />
+
+                <KisiFilters
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    showAdvanced={showAdvancedFilters}
+                    setShowAdvanced={setShowAdvancedFilters}
+                    activeFilterCount={getActiveFilterCount()}
+                    onClearAll={clearAllFilters}
+                    savedViews={savedViews}
+                    onLoadView={(id) => {
+                        const v = savedViews.find((sv) => sv.id === id);
+                        if (v) loadSavedView(v);
+                    }}
+                    onOpenSaveView={() => setShowSaveViewModal(true)}
+                />
+
+                <KisiTable
+                    data={displayedData}
+                    selectedIds={selectedIds}
+                    onSelectAll={handleSelectAll}
+                    onSelectOne={handleSelectOne}
+                    onEdit={(p) => { setEditingPerson(p); setIsFormModalOpen(true); }}
+                    onDelete={handleDeletePerson}
+                />
             </div>
 
-            {isCameraModalOpen && (
-                <CameraCaptureModal
-                    onClose={() => setIsCameraModalOpen(false)}
-                    onCapture={handleCameraCapture}
-                />
-            )}
-            
             {isFormModalOpen && (
                 <KisiFormModal
                     person={editingPerson}
                     onClose={() => { setIsFormModalOpen(false); setEditingPerson(null); }}
                     onSave={handleSavePerson}
+                    isCameraModalOpen={isCameraModalOpen}
+                    setIsCameraModalOpen={setIsCameraModalOpen}
+                    onCameraCapture={handleCameraCapture}
                 />
+            )}
+            
+            {/* Görünüm Kaydetme Modalı */}
+            {showSaveViewModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-zinc-800 p-6 rounded-lg w-96">
+                        <h3 className="text-lg font-semibold mb-4 text-zinc-900 dark:text-zinc-100">Görünümü Kaydet</h3>
+                        <input
+                            type="text"
+                            placeholder="Görünüm adı girin..."
+                            value={currentViewName}
+                            onChange={(e) => setCurrentViewName(e.target.value)}
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 mb-4"
+                            onKeyPress={(e) => e.key === 'Enter' && saveCurrentView()}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => {
+                                    setShowSaveViewModal(false);
+                                    setCurrentViewName('');
+                                }}
+                                className="px-4 py-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={saveCurrentView}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

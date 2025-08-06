@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
 import {
-    DashboardStats, RecentActivity, Person, Proje, YardimBasvurusu, Bagis, ProjeStatus, BasvuruStatus, MembershipType, FinansalKayit, Kumbara, DepoUrunu, VefaDestek, OgrenciBursu, Yetim, Dava, Kullanici, Kurum, Gonullu, Odeme, AyniYardimIslemi, Hizmet, HastaneSevk, DenetimKaydi
+    DashboardStats, RecentActivity, Person, Proje, YardimBasvurusu, Bagis, ProjeStatus, BasvuruStatus, MembershipType, FinansalKayit, Kumbara, DepoUrunu, VefaDestek, OgrenciBursu, Yetim, Dava, Kullanici, Kurum, Gonullu, Odeme, AyniYardimIslemi, Hizmet, HastaneSevk, DenetimKaydi, YardimTalebi
 } from '../types';
 import {
     getPeople, getProjeler, getYardimBasvurulari, getBagislar,
@@ -75,7 +75,8 @@ export function useSupabaseQuery<T extends { id: any }>(tableName: string, optio
                 }
                 if (status === 'CHANNEL_ERROR') {
                    console.error(`Failed to subscribe to ${tableName}:`, err);
-                   setError(`Gerçek zamanlı bağlantı hatası: ${err?.message}`);
+                   // Realtime hatalarını sessizce logla, kullanıcıya gösterme
+                   console.warn(`Realtime connection failed for ${tableName}, continuing without realtime updates`);
                 }
             });
 
@@ -88,7 +89,7 @@ export function useSupabaseQuery<T extends { id: any }>(tableName: string, optio
 }
 
 // Exported hooks for each module
-export const usePeople = () => useSupabaseQuery<Person>('people', { realtime: true });
+export const usePeople = () => useSupabaseQuery<Person>('people', { realtime: false });
 export const useProjects = () => useSupabaseQuery<Proje>('projects');
 export const useApplications = () => {
     const { data: applications, isLoading: isLoadingApps, error: errorApps, refresh: refreshApps } = useSupabaseQuery<YardimBasvurusu>('aid_applications');
@@ -101,11 +102,14 @@ export const useApplications = () => {
         refresh: () => { refreshApps(); refreshPeople(); }
     };
 };
-export const useCases = () => useSupabaseQuery<Dava>('davalar');
-export const useScholarships = () => useSupabaseQuery<OgrenciBursu>('ogrenci_burslari');
-export const useOrphans = () => useSupabaseQuery<Yetim>('yetimler');
+// Temporarily disabled hooks for non-existent tables - providing placeholder exports
+export const useCases = () => ({ data: [], isLoading: false, error: null, refresh: () => {} });
+export const useScholarships = () => ({ data: [], isLoading: false, error: null, refresh: () => {} });
+export const useOrphans = () => ({ data: [], isLoading: false, error: null, refresh: () => {} });
+
+// Use financial_transactions table instead of finansal_kayitlar
 export const useFinancialRecords = () => {
-    const { data: records, isLoading: isLoadingRecords, error: errorRecords, refresh: refreshRecords } = useSupabaseQuery<FinansalKayit>('finansal_kayitlar');
+    const { data: records, isLoading: isLoadingRecords, error: errorRecords, refresh: refreshRecords } = useSupabaseQuery<FinansalKayit>('financial_transactions');
     const { data: projects, isLoading: isLoadingProjects, error: errorProjects, refresh: refreshProjects } = useSupabaseQuery<Proje>('projects');
     return {
         data: { records, projects },
@@ -128,9 +132,31 @@ export const useUyeYonetimi = () => {
     const uyeler = people.filter(p => p.membershipType && p.membershipType !== MembershipType.GONULLU);
     return { data: uyeler, ...rest };
 };
+// Use people table with membershipType filter instead of gonulluler table
 export const useGonulluYonetimi = () => {
-    const { data: gonulluler, ...rest } = useSupabaseQuery<Gonullu>('gonulluler');
-    const { data: people } = useSupabaseQuery<Person>('people');
+    const { data: people, ...rest } = useSupabaseQuery<Person>('people');
+    const gonulluler = people
+        .filter(p => p.membershipType === MembershipType.GONULLU)
+        .map(person => {
+            // Parse volunteer data from notes field
+             let volunteerData: any = {};
+             try {
+                 volunteerData = person.notes ? JSON.parse(person.notes as unknown as string) : {};
+             } catch (e) {
+                 console.warn('Failed to parse volunteer data from notes:', e);
+             }
+             
+             return {
+                 id: person.id,
+                 personId: person.id,
+                 beceriler: volunteerData.beceriler || [],
+                 musaitlik: volunteerData.musaitlik || '',
+                 durum: volunteerData.durum || 'Aktif',
+                 baslangicTarihi: volunteerData.baslangicTarihi || person.registration_date,
+                 toplamSaat: volunteerData.toplamSaat || 0,
+                 ...volunteerData
+             };
+        });
     return { data: { gonulluler, people }, ...rest };
 };
 export const useKullaniciYonetimi = () => useSupabaseQuery<Kullanici>('kullanicilar');
@@ -157,6 +183,8 @@ export const useHastaneSevk = () => {
     const { data: people } = useSupabaseQuery<Person>('people');
     return { data: { sevkler, people }, ...rest };
 };
+export const useKurumlar = () => useSupabaseQuery<Kurum>('kurumlar');
+export const useYardimTalepleri = () => useSupabaseQuery<YardimTalebi>('yardim_talepleri');
 
 
 // Custom hook for Dashboard data
@@ -194,26 +222,26 @@ export const useDashboardData = () => {
 
             // Recent Activities
             const sortedDonations = [...donations].sort((a, b) => new Date(b.tarih).getTime() - new Date(a.tarih).getTime()).slice(0, 2);
-            const sortedPeople = [...people].sort((a, b) => new Date(b.kayitTarihi).getTime() - new Date(a.kayitTarihi).getTime()).slice(0, 2);
+            const sortedPeople = [...people].sort((a, b) => new Date(b.registration_date || '').getTime() - new Date(a.registration_date || '').getTime()).slice(0, 2);
             const sortedApplications = [...applications].sort((a, b) => new Date(b.basvuruTarihi).getTime() - new Date(a.basvuruTarihi).getTime()).slice(0, 2);
             
-            const peopleMap = new Map(people.map(p => [p.id, `${p.ad} ${p.soyad}`]));
+            const peopleMap = new Map(people.map(p => [p.id, `${p.first_name} ${p.last_name}`]));
 
             const activities: RecentActivity[] = [
                 ...sortedDonations.map(d => ({
                     id: `donation-${d.id}`, type: 'donation' as 'donation', timestamp: d.tarih,
-                    description: `${peopleMap.get(d.bagisciId) || 'Bilinmeyen kişi'} <strong>bağış yaptı.</strong>`,
-                    amount: d.tutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
+                    description: `${peopleMap.get(d.bagisciId.toString()) || 'Bilinmeyen kişi'} <strong>bağış yaptı.</strong>`,
+                    amount: (d.tutar ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }),
                     link: '/bagis-yonetimi/tum-bagislar',
                 })),
                 ...sortedPeople.map(p => ({
-                    id: `person-${p.id}`, type: 'person' as 'person', timestamp: p.kayitTarihi,
-                    description: `${p.ad} ${p.soyad} için <strong>Yeni kişi kaydı:</strong>`,
+                    id: `person-${p.id}`, type: 'person' as 'person', timestamp: p.registration_date || '',
+                    description: `${p.first_name} ${p.last_name} için <strong>Yeni kişi kaydı:</strong>`,
                     link: `/kisiler/${p.id}`,
                 })),
                 ...sortedApplications.map(a => ({
                     id: `application-${a.id}`, type: 'application' as 'application', timestamp: a.basvuruTarihi,
-                    description: `${peopleMap.get(a.basvuruSahibiId) || 'Bilinmeyen kişi'} <strong>yeni bir başvuru yaptı.</strong>`,
+                    description: `${peopleMap.get(a.basvuruSahibiId.toString()) || 'Bilinmeyen kişi'} <strong>yeni bir başvuru yaptı.</strong>`,
                     link: `/yardimlar/${a.id}`,
                 })),
             ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);

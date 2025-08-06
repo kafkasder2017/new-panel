@@ -91,13 +91,13 @@ const RaporlamaAnalitik: React.FC = () => {
     }, []);
 
     const chartData = useMemo(() => {
-        const aidRecipients = people.filter(p => p.aldigiYardimTuru && p.aldigiYardimTuru.length > 0);
+        const aidRecipients = people.filter(p => p.aid_type_received && p.aid_type_received.length > 0);
         
         // Nationality Data
         const nationalityCounts = aidRecipients.reduce((acc, person) => {
-            person.uyruk.forEach(u => {
-                acc[u] = (acc[u] || 0) + 1;
-            });
+            if (person.nationality) {
+                acc[person.nationality] = (acc[person.nationality] || 0) + 1;
+            }
             return acc;
         }, {} as Record<string, number>);
         const nationalityData = Object.entries(nationalityCounts).map(([name, value]) => ({ name, value }));

@@ -20,6 +20,16 @@ const getRoleClass = (role: KullaniciRol) => {
     }
 };
 
+const getRoleDisplayName = (role: KullaniciRol) => {
+    switch (role) {
+        case KullaniciRol.YONETICI: return 'Yönetici';
+        case KullaniciRol.EDITOR: return 'Editör';
+        case KullaniciRol.MUHASEBE: return 'Muhasebe';
+        case KullaniciRol.GONULLU: return 'Gönüllü';
+        default: return role;
+    }
+};
+
 const KullaniciYonetimi: React.FC = () => {
     const { data: kullanicilar, isLoading, error, refresh } = useKullaniciYonetimi();
 
@@ -89,7 +99,7 @@ const KullaniciYonetimi: React.FC = () => {
     const columns = useMemo(() => [
         { key: 'kullanici_adi', title: 'Kullanıcı Adı', render: (k: Kullanici) => k.kullanici_adi },
         { key: 'email', title: 'E-posta', render: (k: Kullanici) => k.email },
-        { key: 'rol', title: 'Rol', render: (k: Kullanici) => <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleClass(k.rol)}`}>{k.rol}</span> },
+        { key: 'rol', title: 'Rol', render: (k: Kullanici) => <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleClass(k.rol)}`}>{getRoleDisplayName(k.rol)}</span> },
         { key: 'son_giris', title: 'Son Giriş', render: (k: Kullanici) => k.son_giris ? new Date(k.son_giris).toLocaleString('tr-TR') : 'Hiç' },
         { key: 'durum', title: 'Durum', render: (k: Kullanici) => <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(k.durum)}`}>{k.durum}</span> },
         { key: 'actions', title: 'İşlemler', render: (k: Kullanici) => (
@@ -111,7 +121,7 @@ const KullaniciYonetimi: React.FC = () => {
             <div className="bg-white dark:bg-zinc-800 p-4 sm:p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <Input type="text" placeholder="Kullanıcı adı veya e-posta..." value={filters.searchTerm} onChange={e => setFilters(f => ({...f, searchTerm: e.target.value}))}/>
-                    <Select value={filters.roleFilter} onChange={e => setFilters(f => ({...f, roleFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Roller'}, ...Object.values(KullaniciRol).map(r => ({value:r, label:r}))]}/>
+                    <Select value={filters.roleFilter} onChange={e => setFilters(f => ({...f, roleFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Roller'}, ...Object.values(KullaniciRol).map(r => ({value:r, label:getRoleDisplayName(r)}))]}/>
                     <Select value={filters.statusFilter} onChange={e => setFilters(f => ({...f, statusFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Durumlar'}, ...Object.values(KullaniciDurum).map(s => ({value:s, label:s}))]}/>
                 </div>
                 <Table columns={columns} data={filteredKullanicilar} />
@@ -148,7 +158,7 @@ const KullaniciFormModal: React.FC<{ kullanici: Partial<Kullanici>, onClose: () 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input label="Kullanıcı Adı" name="kullanici_adi" value={formData.kullanici_adi || ''} onChange={handleChange} required />
                     <Input label="E-posta" type="email" name="email" value={formData.email || ''} onChange={handleChange} required disabled={!isNewUser} />
-                    <Select label="Rol" name="rol" value={formData.rol || ''} onChange={handleChange} options={[{value:'', label:'Seçiniz...'}, ...Object.values(KullaniciRol).map(rol => ({value:rol, label:rol}))]} required />
+                    <Select label="Rol" name="rol" value={formData.rol || ''} onChange={handleChange} options={[{value:'', label:'Seçiniz...'}, ...Object.values(KullaniciRol).map(rol => ({value:rol, label:getRoleDisplayName(rol)}))]} required />
                      {isNewUser && (
                         <Input label="Şifre" type="password" name="password" placeholder="Yeni şifre belirle" onChange={handleChange} required />
                      )}

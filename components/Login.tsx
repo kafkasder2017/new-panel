@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 
 interface LoginProps {
-    onLogin: (email: string, password: string) => Promise<any>;
+    onLogin: (email: string, password: string) => Promise<void>;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -27,10 +27,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             const params = new URLSearchParams(window.location.search);
             const shouldAutofill = params.get('autofill') === '1';
             if (shouldAutofill) {
-                const autoEmail = 'isahamid095@gmail.com';
-                const autoPass = 'vadalov95';
-                setEmail(autoEmail);
-                setPassword(autoPass);
+                // Only use development credentials in development environment
+                const isDevelopment = import.meta.env.DEV;
+                const autoEmail = isDevelopment ? import.meta.env.VITE_DEV_EMAIL || '' : '';
+                const autoPass = isDevelopment ? import.meta.env.VITE_DEV_PASSWORD || '' : '';
+                
+                if (autoEmail && autoPass) {
+                    setEmail(autoEmail);
+                    setPassword(autoPass);
+                } else {
+                    console.warn('Development credentials not configured in .env file');
+                    return;
+                }
                 // remember me bilgilerini kaydet
                 try {
                     localStorage.setItem('rememberMe', 'true');
@@ -60,8 +68,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 } catch {}
             }
             await onLogin(email, password);
-        } catch (err: any) {
-            setError(err.message || 'Giriş sırasında bir hata oluştu.');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Giriş sırasında bir hata oluştu.';
+            setError(errorMessage);
             setIsLoading(false);
         }
     };

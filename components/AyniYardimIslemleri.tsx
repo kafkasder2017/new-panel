@@ -5,6 +5,7 @@ import { createAyniYardimIslemi } from '../services/apiService';
 import { useAyniYardimIslemleri } from '../hooks/useData';
 import { PageHeader, Table, Input, Select, Textarea, Button } from './ui';
 import Modal from './Modal.tsx';
+import { getPersonFullName } from '../utils/compat';
 
 const AyniYardimIslemleri: React.FC = () => {
     const { data, isLoading, error, refresh } = useAyniYardimIslemleri();
@@ -12,7 +13,7 @@ const AyniYardimIslemleri: React.FC = () => {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const peopleMap = useMemo(() => new Map(people.map(p => [p.id, `${p.ad} ${p.soyad}`])), [people]);
+    const peopleMap = useMemo(() => new Map(people.map(p => [String(p.id), getPersonFullName(p)])), [people]);
     const productsMap = useMemo(() => new Map(products.map(p => [p.id, p.name])), [products]);
     
     const handleSaveIslem = async (newIslem: Omit<AyniYardimIslemi, 'id'>) => {
@@ -30,7 +31,7 @@ const AyniYardimIslemleri: React.FC = () => {
 
     const columns = useMemo(() => [
         { key: 'tarih', title: 'Tarih', render: (i: AyniYardimIslemi) => new Date(i.tarih).toLocaleDateString('tr-TR')},
-        { key: 'kisiId', title: 'Yardım Alan Kişi', render: (i: AyniYardimIslemi) => peopleMap.get(i.kisiId) || 'Bilinmeyen Kişi'},
+        { key: 'kisiId', title: 'Yardım Alan Kişi', render: (i: AyniYardimIslemi) => peopleMap.get(String(i.kisiId)) || 'Bilinmeyen Kişi'},
         { key: 'urunId', title: 'Verilen Ürün', render: (i: AyniYardimIslemi) => productsMap.get(i.urunId) || 'Bilinmeyen Ürün'},
         { key: 'miktar', title: 'Miktar', render: (i: AyniYardimIslemi) => `${i.miktar} ${i.birim}`},
         { key: 'notlar', title: 'Notlar', render: (i: AyniYardimIslemi) => i.notlar || '-'},
@@ -76,7 +77,7 @@ const AyniYardimFormModal: React.FC<{
     const [error, setError] = useState('');
     
     const selectedProduct = useMemo(() => {
-        return products.find(p => p.id === Number(formData.urunId));
+        return products.find(p => String(p.id) === formData.urunId);
     }, [formData.urunId, products]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -111,7 +112,7 @@ const AyniYardimFormModal: React.FC<{
     return (
         <Modal isOpen={true} onClose={onClose} title="Yeni Ayni Yardım Çıkışı">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <Select label="Yardım Yapılacak Kişi" name="kisiId" value={formData.kisiId} onChange={handleChange} options={[{value: '', label: 'Kişi Seçin...'}, ...people.map(p => ({value: p.id, label: `${p.ad} ${p.soyad}`}))]} required />
+                <Select label="Yardım Yapılacak Kişi" name="kisiId" value={formData.kisiId} onChange={handleChange} options={[{value: '', label: 'Kişi Seçin...'}, ...people.map(p => ({value: p.id, label: getPersonFullName(p)}))]} required />
                 <Select label="Depodan Verilecek Ürün" name="urunId" value={formData.urunId} onChange={handleChange} options={[{value: '', label: 'Ürün Seçin...'}, ...products.filter(p => p.quantity > 0).map(p => ({value: p.id, label: `${p.name} (Stok: ${p.quantity} ${p.unit})`}))]} required />
                 <Input label="Miktar" type="number" name="miktar" value={formData.miktar} onChange={handleChange} min="1" max={selectedProduct?.quantity || 1} required />
                 <Textarea label="Notlar" name="notlar" value={formData.notlar} onChange={handleChange} placeholder="Teslimat notu, özel durum vb." />

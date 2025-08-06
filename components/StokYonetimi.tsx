@@ -71,15 +71,15 @@ const StokYonetimi: React.FC = () => {
     };
 
     const columns = useMemo(() => [
-        { key: 'name', title: 'Ürün Adı / Kodu', render: (u: DepoUrunu) => <div><div className="font-medium text-zinc-900 dark:text-zinc-100">{u.name}</div><div className="text-xs text-zinc-500">{u.code}</div></div> },
-        { key: 'barcode', title: 'Barkod', render: (u: DepoUrunu) => <span className="font-mono">{u.barcode || '-'}</span> },
-        { key: 'category', title: 'Kategori', render: (u: DepoUrunu) => u.category },
-        { key: 'quantity', title: 'Miktar', render: (u: DepoUrunu) => `${u.quantity} ${u.unit}` },
-        { key: 'expiration', title: 'SKT', render: (u: DepoUrunu) => {
+        { key: 'name', title: 'Ürün Adı / Kodu', render: (value: any, u: DepoUrunu) => <div><div className="font-medium text-zinc-900 dark:text-zinc-100">{u.name}</div><div className="text-xs text-zinc-500">{u.code}</div></div> },
+        { key: 'barcode', title: 'Barkod', render: (value: any, u: DepoUrunu) => <span className="font-mono">{u.barcode || '-'}</span> },
+        { key: 'category', title: 'Kategori', render: (value: any, u: DepoUrunu) => u.category },
+        { key: 'quantity', title: 'Miktar', render: (value: any, u: DepoUrunu) => `${u.quantity} ${u.unit}` },
+        { key: 'expiration', title: 'SKT', render: (value: any, u: DepoUrunu) => {
             const expInfo = getExpirationInfo(u.expirationDate);
             return <span className={expInfo.className}>{expInfo.text} {expInfo.expired && <span className="text-xs font-normal">(GEÇMİŞ)</span>}</span>;
         }},
-        { key: 'actions', title: 'İşlemler', render: (u: DepoUrunu) => (
+        { key: 'actions', title: 'İşlemler', render: (value: any, u: DepoUrunu) => (
             <div className="flex items-center justify-end space-x-1">
                 <Button variant="ghost" size="sm" onClick={() => { setSelectedUrun(u); setModal('print'); }}>Barkod</Button>
                 <Button variant="ghost" size="sm" onClick={() => { setSelectedUrun(u); setModal('form'); }}>Düzenle</Button>
@@ -103,7 +103,7 @@ const StokYonetimi: React.FC = () => {
                     </div>
                     <Select value={filters.categoryFilter} onChange={e => setFilters(f => ({...f, categoryFilter: e.target.value as any}))} options={[{value: 'all', label: 'Tüm Kategoriler'}, ...Object.values(DepoUrunKategorisi).map(c => ({value: c, label: c}))]} />
                 </div>
-                <Table columns={columns} data={filteredDepo} rowClassName={getRowClass} />
+                <Table<DepoUrunu> columns={columns} data={filteredDepo} rowClassName={getRowClass} />
             </div>
             
             {modal === 'form' && selectedUrun && <UrunFormModal urun={selectedUrun} onClose={() => setModal(null)} onSave={handleSaveUrun} />}

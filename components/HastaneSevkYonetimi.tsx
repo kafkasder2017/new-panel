@@ -4,6 +4,7 @@ import { HastaneSevk, Person, SevkDurumu } from '../types';
 import { createHastaneSevk, updateHastaneSevk, deleteHastaneSevk } from '../services/apiService';
 import { useHastaneSevk } from '../hooks/useData';
 import { PageHeader, Table, Input, Select, Textarea, Button } from './ui';
+import { safeEnumCast } from '../utils/typeGuards';
 import Modal from './Modal';
 
 const getStatusClass = (status: SevkDurumu) => {
@@ -28,7 +29,7 @@ const HastaneSevkYonetimi: React.FC = () => {
     
     const filteredSevkler = useMemo(() => {
         return sevkler.filter(sevk => {
-            const kisiAdi = peopleMap.get(sevk.kisiId)?.toLowerCase() || '';
+            const kisiAdi = peopleMap.get(String(sevk.kisiId))?.toLowerCase() || '';
             const matchesSearch = kisiAdi.includes(filters.searchTerm.toLowerCase()) || 
                                   sevk.hastaneAdi.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
                                   sevk.bolum.toLowerCase().includes(filters.searchTerm.toLowerCase());
@@ -69,7 +70,7 @@ const HastaneSevkYonetimi: React.FC = () => {
     };
     
     const columns = useMemo(() => [
-        { key: 'kisiId', title: 'Sevk Edilen Kişi', render: (s: HastaneSevk) => peopleMap.get(s.kisiId) || 'Bilinmeyen Kişi' },
+        { key: 'kisiId', title: 'Sevk Edilen Kişi', render: (s: HastaneSevk) => peopleMap.get(String(s.kisiId)) || 'Bilinmeyen Kişi' },
         { key: 'hastaneAdi', title: 'Hastane / Bölüm', render: (s: HastaneSevk) => <div><div>{s.hastaneAdi}</div><div className="text-xs text-zinc-500">{s.bolum}</div></div> },
         { key: 'randevuTarihi', title: 'Randevu Tarihi', render: (s: HastaneSevk) => s.randevuTarihi ? new Date(s.randevuTarihi).toLocaleDateString('tr-TR') : 'Belirtilmemiş' },
         { key: 'durum', title: 'Durum', render: (s: HastaneSevk) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(s.durum)}`}>{s.durum}</span> },
@@ -92,7 +93,7 @@ const HastaneSevkYonetimi: React.FC = () => {
             <div className="bg-white dark:bg-zinc-800 p-4 sm:p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <Input type="text" placeholder="Kişi, hastane veya bölüm ara..." value={filters.searchTerm} onChange={e => setFilters(f => ({...f, searchTerm: e.target.value}))} />
-                    <Select value={filters.statusFilter} onChange={e => setFilters(f => ({...f, statusFilter: e.target.value as any}))} options={[{value: 'all', label: 'Tüm Durumlar'}, ...Object.values(SevkDurumu).map(d => ({value:d, label:d}))]}/>
+                    <Select value={filters.statusFilter} onChange={e => setFilters(f => ({...f, statusFilter: safeEnumCast(SevkDurumu, e.target.value, 'all' as const)}))} options={[{value: 'all', label: 'Tüm Durumlar'}, ...Object.values(SevkDurumu).map(d => ({value:d, label:d}))]}/>
                 </div>
                 <Table columns={columns} data={filteredSevkler} />
             </div>

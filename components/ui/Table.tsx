@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import { TableSkeleton } from './Skeleton';
 
-export interface TableColumn {
+export interface TableColumn<T = Record<string, unknown>> {
   key: string;
   title: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
-  render?: (value: any, record: any) => React.ReactNode;
+  render?: (value: any, record: T) => React.ReactNode;
   sortable?: boolean;
 }
 
-export interface TableProps {
-  columns: TableColumn[];
-  data: any[];
+export interface TableProps<T = Record<string, unknown>> {
+  columns: TableColumn<T>[];
+  data: T[];
   loading?: boolean;
   pagination?: boolean;
   pageSize?: number;
-  onRowClick?: (record: any) => void;
+  onRowClick?: (record: T) => void;
   className?: string;
   emptyText?: string;
   striped?: boolean;
   hover?: boolean;
-  rowClassName?: (record: any) => string;
+  rowClassName?: (record: T) => string;
 }
 
 interface PaginationProps {
@@ -95,7 +95,7 @@ const Pagination: React.FC<PaginationProps> = ({ current, total, pageSize, onCha
   );
 };
 
-export const Table: React.FC<TableProps> = ({
+export const Table = <T extends Record<string, any> = Record<string, unknown>>({
   columns,
   data,
   loading = false,
@@ -107,7 +107,7 @@ export const Table: React.FC<TableProps> = ({
   striped = true,
   hover = true,
   rowClassName,
-}) => {
+}: TableProps<T>) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -125,8 +125,8 @@ export const Table: React.FC<TableProps> = ({
     if (!sortColumn) return data;
     
     return [...data].sort((a, b) => {
-      const aValue = a[sortColumn];
-      const bValue = b[sortColumn];
+      const aValue = (a as any)[sortColumn];
+      const bValue = (b as any)[sortColumn];
       
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
@@ -151,16 +151,16 @@ export const Table: React.FC<TableProps> = ({
             <tr role="row">
               {columns.map((column, index) => (
                 <th
-                  key={column.key}
+                  key={column.key as string}
                   className={`px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${
                     column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'
                   } ${column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600' : ''}`}
                   style={{ width: column.width }}
-                  onClick={() => column.sortable && handleSort(column.key)}
+                  onClick={() => column.sortable && handleSort(column.key as string)}
                   onKeyDown={(e) => {
                     if (column.sortable && (e.key === 'Enter' || e.key === ' ')) {
                       e.preventDefault();
-                      handleSort(column.key);
+                      handleSort(column.key as string);
                     }
                   }}
                   tabIndex={column.sortable ? 0 : -1}
@@ -225,7 +225,7 @@ export const Table: React.FC<TableProps> = ({
                 >
                   {columns.map((column, colIndex) => (
                     <td
-                      key={column.key}
+                      key={column.key as string}
                       className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 ${
                         column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'
                       }`}
@@ -233,8 +233,8 @@ export const Table: React.FC<TableProps> = ({
                       aria-colindex={colIndex + 1}
                     >
                       {column.render
-                        ? column.render(record[column.key], record)
-                        : record[column.key]}
+                        ? column.render((record as any)[column.key as string], record)
+                        : (record as any)[column.key as string]}
                     </td>
                   ))}
                 </tr>

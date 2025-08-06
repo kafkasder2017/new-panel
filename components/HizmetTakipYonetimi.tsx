@@ -27,7 +27,7 @@ const HizmetTakipYonetimi: React.FC = () => {
     
     const filteredHizmetler = useMemo(() => {
         return hizmetler.filter(hizmet => {
-            const kisiAdi = peopleMap.get(hizmet.kisiId)?.toLowerCase() || '';
+            const kisiAdi = peopleMap.get(String(hizmet.kisiId))?.toLowerCase() || '';
             const matchesSearch = kisiAdi.includes(filters.searchTerm.toLowerCase()) || 
                                   (hizmet.hizmetVeren || '').toLowerCase().includes(filters.searchTerm.toLowerCase());
             const matchesStatus = filters.statusFilter === 'all' || hizmet.durum === filters.statusFilter;
@@ -68,7 +68,7 @@ const HizmetTakipYonetimi: React.FC = () => {
     };
     
     const columns = useMemo(() => [
-        { key: 'kisiId', title: 'Hizmet Alan Kişi', render: (h: Hizmet) => peopleMap.get(h.kisiId) || 'Bilinmeyen Kişi' },
+        { key: 'kisiId', title: 'Hizmet Alan Kişi', render: (h: Hizmet) => peopleMap.get(String(h.kisiId)) || 'Bilinmeyen Kişi' },
         { key: 'hizmetTuru', title: 'Hizmet Türü / Veren', render: (h: Hizmet) => <div><div>{h.hizmetTuru}</div><div className="text-xs text-zinc-500">{h.hizmetVeren}</div></div> },
         { key: 'tarih', title: 'Tarih', render: (h: Hizmet) => new Date(h.tarih).toLocaleDateString('tr-TR')},
         { key: 'durum', title: 'Durum', render: (h: Hizmet) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(h.durum)}`}>{h.durum}</span> },

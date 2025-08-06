@@ -102,6 +102,10 @@ export interface BankaHesabi {
     id: string;
     iban: string;
     hesapAdi: string;
+    bankaAdi?: string;
+    hesapNo?: string;
+    ibanNo?: string;
+    hesapSahibi?: string;
 }
 
 export enum DokumanTipi {
@@ -120,6 +124,9 @@ export interface PersonDocument {
     ad: string;
     tip: DokumanTipi;
     path: string; // File path in Supabase Storage, not the full URL.
+    dosyaAdi?: string;
+    dosyaYolu?: string;
+    yuklemeTarihi?: string;
 }
 
 export interface PersonPhoto {
@@ -127,6 +134,8 @@ export interface PersonPhoto {
     url: string;
     aciklama: string;
     yuklenmeTarihi: string;
+    dosyaAdi?: string;
+    dosyaYolu?: string;
 }
 
 export enum YakinlikTuru {
@@ -140,8 +149,13 @@ export enum YakinlikTuru {
 }
 
 export interface Dependent {
+    id?: number;
     personId: number;
     relationship: YakinlikTuru;
+    ad?: string;
+    soyad?: string;
+    yakinlik?: string;
+    dogumTarihi?: string;
 }
 
 // New Enums for detailed Person model
@@ -204,12 +218,20 @@ export enum Hastalik {
     DIGER = 'Diğer',
 }
 
+export interface HastalikDetay {
+    id: number;
+    ad: string;
+    aciklama?: string;
+}
+
 export interface AcilDurumKisisi {
     id: string;
     ad: string;
     yakinlik: YakinlikTuru;
     telefon1: string;
     telefon2?: string;
+    soyad?: string;
+    telefon?: string;
 }
 
 export enum PersonelEtiket {
@@ -219,115 +241,122 @@ export enum PersonelEtiket {
     SAHTE_EVRAK = 'Sahte Evrak/Yalan Beyan',
 }
 
+export interface PersonelEtiketDetay {
+    id: number;
+    ad: string;
+    renk: string;
+}
+
 export enum OzelDurum {
     DEPREMZEDE = 'Depremzede',
 }
 
-export interface Person {
+export interface OzelDurumDetay {
     id: number;
-    // --- Genel Bilgiler ---
     ad: string;
-    soyad: string;
-    uyruk: Uyruk[]; 
-    kimlikTuru: KimlikTuru;
-    kimlikNo: string;
-    dogumTarihi: string;
-    cepTelefonu: string;
-    sabitTelefon?: string;
-    yurtdisiTelefon?: string;
+    aciklama?: string;
+}
+
+export interface Person {
+    id: string; // UUID in Supabase
+    // --- Genel Bilgiler ---
+    first_name: string; // Maps to 'ad' in frontend
+    last_name: string; // Maps to 'soyad' in frontend
+    nationality?: string; // Maps to 'uyruk'
+    identity_type?: string; // Maps to 'kimlikTuru'
+    identity_number?: string; // Maps to 'kimlikNo'
+    birth_date?: string; // Maps to 'dogumTarihi'
+    phone?: string; // Maps to 'cepTelefonu'
     email?: string;
-    ulke: string;
-    sehir: string;
-    yerlesim: string; // ilçe / bölge
-    mahalle: string;
-    adres: string;
-    lat?: number;
-    lng?: number;
-    kategori?: 'Bağışçı' | 'Yardım Alan' | 'Üye';
-    dosyaNumarasi: string;
-    sponsorlukTipi: SponsorlukTipi;
-    kayitDurumu: 'Taslak' | 'Kaydedildi';
-
-    // --- Bağlantılı Kayıtlar ---
-    bankaHesaplari?: BankaHesabi[];
-    dokumanlar?: PersonDocument[];
-    fotograflar?: PersonPhoto[];
-    bagislar?: any[]; // Placeholder
-    referanslar?: any[]; // Placeholder
-    sosyalKartlar?: any[]; // Placeholder
-    yardimTalepleri?: any[]; // Placeholder
-    dependents?: Dependent[]; // Bakmakla yükümlü oldukları
-    aldigiYardimTuru?: YardimTuruDetay[];
-    notlar?: Not[];
-    rizaBeyani: RizaBeyaniStatus;
+    address?: string; // Maps to 'adres'
+    city?: string; // Maps to 'il'
+    province?: string; // Maps to 'il'
+    district?: string; // Maps to 'ilce'
+    postal_code?: string;
+    monthly_income?: number; // Maps to 'aylikGelir'
+    family_size?: number;
+    housing_type?: string; // Maps to 'yasadigiYer'
+    health_issues?: string; // Maps to 'hastaliklar'
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    emergency_contact_relation?: string;
+    status?: PersonStatus; // Maps to 'durum'
+    person_type?: string; // Maps to 'membershipType'
+    registration_date?: string; // Maps to 'kayitTarihi'
+    registration_status?: string; // Maps to 'kayitDurumu'
+    consent_statement?: RizaBeyaniStatus; // Maps to 'rizaBeyani'
+    file_number?: string; // Maps to 'dosyaNumarasi'
+    sponsorship_type?: SponsorlukTipi; // Maps to 'sponsorlukTipi'
+    file_connection?: DosyaBaglantisi; // Maps to 'dosyaBaglantisi'
+    is_record_deleted?: boolean; // Maps to 'isKaydiSil'
+    registering_unit?: string; // Maps to 'kaydiAcanBirim'
+    country?: string; // Maps to 'ulke'
+    neighborhood?: string; // Maps to 'mahalle'
+    lat?: number; // Latitude for map coordinates
+    lng?: number; // Longitude for map coordinates
+    category?: string; // Person category (Üye, Yardım Alan, etc.)
+    notes?: string; // Maps to 'notlar'
+    created_by?: string;
+    created_at?: string;
+    updated_at?: string;
     
-    // --- Kimlik Bilgileri ---
-    babaAdi?: string;
-    anaAdi?: string;
-    gecerlilikVerenKurum?: string;
-    seriNumarasi?: string;
+    // Additional fields for backward compatibility
+    gender?: string; // Maps to 'cinsiyet'
+    marital_status?: string; // Maps to 'medeniDurum'
+    education_level?: string; // Maps to 'egitim'
+    employment_status?: string; // Maps to 'isDurumu'
+    residence_type?: YasadigiYer; // Maps to 'yasadigiYer'
+    aid_type_received?: YardimTuruDetay[]; // Maps to 'aldigiYardimTuru'
+    membershipType?: MembershipType; // Maps to 'membershipType'
+    bagisYapti?: boolean; // Indicates if person made donations
     
-    // --- Pasaport ve Vize ---
-    pasaportTuru?: string;
-    pasaportNo?: string;
-    pasaportGecerlilikTarihi?: string;
-    vizeBaslangicBitis?: string;
-    geriDonusBelgesi?: boolean;
+    // Additional fields for detailed person data
+     bankaHesaplari?: BankaHesabi[];
+     dokumanlar?: Dokuman[];
+     fotograflar?: Fotograf[];
+     bagislar?: any[];
+     referanslar?: any[];
+     sosyalKartlar?: any[];
+     yardimTalepleri?: any[];
+     dependents?: Dependent[];
+     father_name?: string;
+     mother_name?: string;
+     issuing_authority?: string;
+     serial_number?: string;
+     birth_place?: string;
+     education?: EgitimDurumu;
+     work_sector?: string;
+     profession_group?: string;
+     profession_description?: string;
+     criminal_record?: boolean;
+     monthly_expense?: number;
+     social_security?: boolean;
+     income_sources?: GelirKaynagi[];
+     blood_type?: KanGrubu;
+     smoking?: boolean;
+     disability?: { durum: boolean };
+     prosthetics_used?: string;
+     medical_devices?: string;
+     medications_used?: string;
+     surgeries?: string;
+     diseases?: HastalikDetay[];
+     diseases_description?: string;
+     emergency_contacts?: AcilDurumKisisi[];
+     tags?: PersonelEtiketDetay[];
+     special_situations?: OzelDurumDetay[];
+     registered_by?: string;
+     registration_ip?: string;
+     descriptions?: { tr: string };
 
-    // --- Kişisel Veriler ---
-    cinsiyet?: 'Erkek' | 'Kız';
-    dogumYeri?: string;
-    medeniDurum?: MedeniDurum;
-    egitim?: EgitimDurumu;
-    isDurumu?: IsDurumu;
-    calistigiSektor?: string;
-    meslekGrubu?: string;
-    meslekAciklamasi?: string;
-    adliSicilKaydi?: boolean;
-
-    // --- İş ve Gelir Durumu ---
-    yasadigiYer?: YasadigiYer;
-    aylikGelir?: number;
-    aylikGider?: number;
-    sosyalGuvence?: boolean;
-    gelirKaynaklari?: GelirKaynagi[];
-    
-    // --- Sağlık Durumu ---
-    kanGrubu?: KanGrubu;
-    sigaraKullanimi?: boolean;
-    engellilik?: { durum: boolean; aciklama?: string };
-    kullanilanProtezler?: string;
-    tibbiCihazlar?: string;
-    kullanilanIlaclar?: string;
-    ameliyatlar?: string;
-    hastaliklar?: Hastalik[];
-    hastaliklarAciklama?: string;
-
-    // --- Acil Durum İletişim ---
-    acilDurumIletisim?: AcilDurumKisisi[];
-
-    // --- Etiketler & Özel Durumlar ---
-    etiketler?: PersonelEtiket[];
-    ozelDurumlar?: OzelDurum[];
-
-    // --- Kayıt Bilgisi ---
-    kayitTarihi: string;
-    kaydiAcanBirim: string;
-    kayitEden?: string;
-    kayitIp?: string;
-
-    // --- İlave Açıklamalar ---
-    aciklamalar?: {
-        tr?: string;
-        en?: string;
-        ar?: string;
-    };
-    
-    // from old model, keep for now
-    dosyaBaglantisi: DosyaBaglantisi;
-    isKaydiSil: boolean;
-    durum: PersonStatus;
-    membershipType?: MembershipType;
+    // Legacy fields for backward compatibility (computed from main fields)
+    ad?: string; // Computed from first_name
+    soyad?: string; // Computed from last_name
+    adSoyad?: string; // Computed from first_name + last_name
+    kimlikNo?: string; // Alias for identity_number
+    cepTelefonu?: string; // Alias for phone
+    dogumTarihi?: string; // Alias for birth_date
+    kayitTarihi?: string; // Alias for registration_date
+    durum?: string; // Alias for status
 }
 
 // Kurum Yönetimi Types
@@ -810,10 +839,10 @@ export interface FinansalKayit {
 
 // Kullanıcı Yönetimi Types
 export enum KullaniciRol {
-    YONETICI = 'Yönetici',
-    EDITOR = 'Editör',
-    MUHASEBE = 'Muhasebe',
-    GONULLU = 'Gönüllü',
+    YONETICI = 'YONETICI',
+    EDITOR = 'EDITOR',
+    MUHASEBE = 'MUHASEBE',
+    GONULLU = 'GONULLU',
 }
 
 export enum KullaniciDurum {
@@ -913,6 +942,9 @@ export interface Profil {
     profilFotoUrl: string;
 }
 
+// ProfilData alias for backward compatibility
+export type ProfilData = Profil;
+
 // Raporlar & Analitik Types
 export interface ChartDataPoint {
     name: string;
@@ -952,6 +984,26 @@ export interface Klasor {
 }
 
 export type DosyaSistemiOgesi = Dosya | Klasor;
+
+// Eksik type tanımları
+export interface Dokuman {
+    id: string;
+    ad: string;
+    tip: DokumanTipi;
+    path: string;
+    dosyaAdi?: string;
+    dosyaYolu?: string;
+    yuklemeTarihi?: string;
+}
+
+export interface Fotograf {
+    id: string;
+    url: string;
+    aciklama: string;
+    yuklenmeTarihi: string;
+    dosyaAdi?: string;
+    dosyaYolu?: string;
+}
 
 // Bildirimler Types
 export enum BildirimTuru {
@@ -1306,4 +1358,35 @@ export interface DonationCampaign {
     status: CampaignStatus;
     created_by?: string;
     created_at: string;
+}
+
+// Yardım Talepleri Types
+export enum YardimDurumu {
+    BEKLEMEDE = 'Beklemede',
+    INCELEMEDE = 'İncelemede',
+    ONAYLANDI = 'Onaylandı',
+    REDDEDILDI = 'Reddedildi',
+    TAMAMLANDI = 'Tamamlandı'
+}
+
+export enum OncelikSeviyesi {
+    DUSUK = 'Düşük',
+    ORTA = 'Orta',
+    YUKSEK = 'Yüksek',
+    ACIL = 'Acil'
+}
+
+export interface YardimTalebi {
+    id: string;
+    baslik: string;
+    aciklama: string;
+    yardimTuru: YardimTuruDetay;
+    oncelikSeviyesi: OncelikSeviyesi;
+    durum: YardimDurumu;
+    talepEdenKisiId?: string;
+    hedefMiktar?: number;
+    olusturmaTarihi: string;
+    guncellenmeTarihi?: string;
+    tamamlanmaTarihi?: string;
+    notlar?: string;
 }

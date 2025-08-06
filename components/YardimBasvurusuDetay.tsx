@@ -158,7 +158,7 @@ const YardimBasvurusuDetay: React.FC = () => {
             const basvuruData = await getYardimBasvurusuById(parseInt(basvuruId, 10));
             setBasvuru(basvuruData);
             if (basvuruData) {
-                const applicantData = await getPeople().then(people => people.find(p => p.id === basvuruData.basvuruSahibiId));
+                const applicantData = await getPeople().then(people => people.find(p => p.id === basvuruData.basvuruSahibiId.toString()));
                 setApplicant(applicantData || null);
             }
         } catch (err: any) {

@@ -38,7 +38,7 @@ const GonulluDetay: React.FC = () => {
 
             try {
                 // Step 1: Fetch the main record
-                const gonulluData = await getGonulluById(parseInt(gonulluId, 10));
+                const gonulluData = await getGonulluById(gonulluId);
                 if (!gonulluData) {
                     throw new Error(`Gönüllü kaydı (ID: ${gonulluId}) bulunamadı.`);
                 }
@@ -48,7 +48,7 @@ const GonulluDetay: React.FC = () => {
 
                 // Step 2: Fetch dependent and parallel data
                 const [personData, projectsData] = await Promise.all([
-                    getPersonById(gonulluData.personId),
+                    getPersonById(String(gonulluData.personId)),
                     getProjeler(),
                 ]);
 
@@ -78,14 +78,14 @@ const GonulluDetay: React.FC = () => {
         if (!gonullu) return [];
         return projects.flatMap(p => 
             (p.gorevler || []).map(g => ({...g, projectName: p.name}))
-        ).filter(g => g.sorumluId === gonullu.personId);
+        ).filter(g => String(g.sorumluId) === String(gonullu.personId));
     }, [gonullu, projects]);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     const onUpdateGonullu = async (updatedGonullu: Gonullu) => {
         try {
-            const saved = await updateGonullu(updatedGonullu.id, updatedGonullu);
+            const saved = await updateGonullu(String(updatedGonullu.id), updatedGonullu);
             setGonullu(saved);
         } catch (err) {
             toast.error('Gönüllü güncellenirken bir hata oluştu.');
@@ -146,9 +146,9 @@ const GonulluDetay: React.FC = () => {
                      <div className="bg-white p-6 rounded-lg shadow-sm">
                         <h3 className="text-lg font-semibold text-slate-800 mb-4">İletişim Bilgileri</h3>
                         <div className="space-y-2 text-sm">
-                            <p className="text-slate-600"><strong>Telefon:</strong> {person.cepTelefonu}</p>
+                            <p className="text-slate-600"><strong>Telefon:</strong> {person.phone}</p>
                             <p className="text-slate-600"><strong>E-posta:</strong> {person.email || 'Belirtilmemiş'}</p>
-                            <p className="text-slate-600"><strong>Adres:</strong> {person.adres}, {person.yerlesim}, {person.sehir}</p>
+                            <p className="text-slate-600"><strong>Adres:</strong> {person.address}, {person.district}, {person.city}</p>
                         </div>
                     </div>
                 </div>

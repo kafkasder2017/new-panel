@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Gonullu, Person, Beceri, GonulluDurum } from '../types';
+import { Gonullu, Person, Beceri, GonulluDurum, MembershipType, Not } from '../types';
+import { getPersonFullName } from '../utils/compat';
 import { useGonulluYonetimi } from '../hooks/useData';
-import { createGonullu, updateGonullu } from '../services/apiService';
+import { createPerson, updatePerson } from '../services/apiService';
 import { PageHeader, Table, Select, Input, Button } from './ui';
 import Modal from './Modal';
 
@@ -20,12 +21,12 @@ const GonulluYonetimi: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingGonullu, setEditingGonullu] = useState<Partial<Gonullu> | null>(null);
 
-    const peopleMap = useMemo(() => new Map(people.map(p => [p.id, p])), [people]);
+    const peopleMap = useMemo(() => new Map(people.map(p => [String(p.id), p])), [people]);
 
     const enrichedGonulluler = useMemo(() => {
         return gonulluler.map(g => ({
             ...g,
-            person: peopleMap.get(g.personId)
+            person: peopleMap.get(String(g.personId))
         })).filter(g => g.person);
     }, [gonulluler, peopleMap]);
 
@@ -33,7 +34,7 @@ const GonulluYonetimi: React.FC = () => {
         return enrichedGonulluler.filter(g => {
             const person = g.person!;
             const lowerSearch = filters.searchTerm.toLowerCase();
-            const matchesSearch = `${person.ad} ${person.soyad}`.toLowerCase().includes(lowerSearch);
+            const matchesSearch = `${(person as any).ad ?? person.first_name ?? ''} ${(person as any).soyad ?? person.last_name ?? ''}`.toLowerCase().includes(lowerSearch);
             const matchesSkill = filters.skillFilter === 'all' || g.beceriler.includes(filters.skillFilter);
             const matchesStatus = filters.statusFilter === 'all' || g.durum === filters.statusFilter;
             return matchesSearch && matchesSkill && matchesStatus;
@@ -42,24 +43,59 @@ const GonulluYonetimi: React.FC = () => {
     
     const handleSaveGonullu = async (gonulluToSave: Partial<Gonullu>) => {
         const isNew = !gonulluToSave.id;
-        const promise = isNew
-            ? createGonullu({ ...gonulluToSave, baslangicTarihi: new Date().toISOString() } as Omit<Gonullu, 'id'>)
-            : updateGonullu(gonulluToSave.id!, gonulluToSave);
         
-        toast.promise(promise, {
-            loading: 'Kaydediliyor...',
-            success: () => {
-                refresh();
-                setIsModalOpen(false);
-                setEditingGonullu(null);
-                return isNew ? 'Gönüllü başarıyla eklendi!' : 'Gönüllü başarıyla güncellendi!';
-            },
-            error: 'Bir hata oluştu.',
-        });
+        // For new volunteers, we need to update the person's membershipType to GONULLU
+        if (isNew && gonulluToSave.personId) {
+            const promise = updatePerson(String(gonulluToSave.personId), { 
+                membershipType: MembershipType.GONULLU,
+                // Store volunteer-specific data in notes or custom fields
+                notes: JSON.stringify({
+                    beceriler: gonulluToSave.beceriler || [],
+                    musaitlik: gonulluToSave.musaitlik || '',
+                    durum: gonulluToSave.durum || 'Aktif',
+                    baslangicTarihi: gonulluToSave.baslangicTarihi || new Date().toISOString()
+                })
+            });
+            
+            toast.promise(promise, {
+                loading: 'Kaydediliyor...',
+                success: () => {
+                    refresh();
+                    setIsModalOpen(false);
+                    setEditingGonullu(null);
+                    return 'Gönüllü başarıyla eklendi!';
+                },
+                error: 'Bir hata oluştu.',
+            });
+        } else {
+            // For existing volunteers, update their person record
+            const personId = gonulluToSave.personId || gonulluler.find(g => g.id === gonulluToSave.id)?.personId;
+            if (personId) {
+                const promise = updatePerson(String(personId), {
+                    notes: JSON.stringify({
+                        beceriler: gonulluToSave.beceriler || [],
+                        musaitlik: gonulluToSave.musaitlik || '',
+                        durum: gonulluToSave.durum || 'Aktif',
+                        baslangicTarihi: gonulluToSave.baslangicTarihi || new Date().toISOString()
+                    })
+                });
+                
+                toast.promise(promise, {
+                    loading: 'Kaydediliyor...',
+                    success: () => {
+                        refresh();
+                        setIsModalOpen(false);
+                        setEditingGonullu(null);
+                        return 'Gönüllü başarıyla güncellendi!';
+                    },
+                    error: 'Bir hata oluştu.',
+                });
+            }
+        }
     };
     
     const columns = useMemo(() => [
-        { key: 'person', title: 'Ad Soyad', render: (g: any) => `${g.person.ad} ${g.person.soyad}` },
+        { key: 'person', title: 'Ad Soyad', render: (g: any) => getPersonFullName(g.person) },
         { key: 'beceriler', title: 'Beceriler', render: (g: Gonullu) => (
              <div className="flex flex-wrap gap-1">
                 {g.beceriler.slice(0, 2).map(b => <span key={b} className="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-full">{b}</span>)}
@@ -119,7 +155,7 @@ const GonulluFormModal: React.FC<GonulluFormModalProps> = ({ gonullu, onClose, o
     const [selectedSkills, setSelectedSkills] = useState<Beceri[]>(gonullu?.beceriler || []);
 
     const availablePeople = useMemo(() => {
-        return allPeople.filter(p => !existingVolunteerIds.includes(p.id));
+        return allPeople.filter(p => !existingVolunteerIds.includes(Number(p.id)));
     }, [allPeople, existingVolunteerIds]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -143,7 +179,7 @@ const GonulluFormModal: React.FC<GonulluFormModalProps> = ({ gonullu, onClose, o
         <Modal isOpen={true} onClose={onClose} title={isNew ? 'Yeni Gönüllü Ekle' : 'Gönüllü Bilgilerini Düzenle'}>
             <form onSubmit={handleSubmit} className="space-y-4">
                  {isNew && (
-                     <Select label="Kişi Seç" name="personId" value={formData.personId || ''} onChange={(e) => setFormData(prev => ({...prev, personId: Number(e.target.value)}))} options={[{value: '', label: 'Lütfen bir kişi seçin...'}, ...availablePeople.map(p => ({value: p.id, label: `${p.ad} ${p.soyad}`}))]} required/>
+                     <Select label="Kişi Seç" name="personId" value={formData.personId || ''} onChange={(e) => setFormData(prev => ({...prev, personId: Number(e.target.value)}))} options={[{value: '', label: 'Lütfen bir kişi seçin...'}, ...availablePeople.map(p => ({value: p.id, label: getPersonFullName(p)}))]} required/>
                 )}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input label="Başlangıç Tarihi" type="date" name="baslangicTarihi" value={formData.baslangicTarihi || new Date().toISOString().split('T')[0]} onChange={handleChange} required />

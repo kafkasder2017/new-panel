@@ -77,7 +77,7 @@ const HaritaModulu: React.FC = () => {
 
         if (layers.recipients) {
             people
-                .filter(p => p.lat && p.lng && p.aldigiYardimTuru && p.aldigiYardimTuru.length > 0)
+                .filter(p => p.lat && p.lng && p.aid_type_received && p.aid_type_received.length > 0)
                 .forEach(p => points.push({ id: `person-${p.id}`, lat: p.lat!, lng: p.lng!, type: 'recipients', data: p }));
         }
         if (layers.volunteers) {
@@ -163,9 +163,9 @@ const LayerControl: React.FC<{ layers: Record<LayerType, boolean>, setLayers: Re
 
 const PersonPopup: React.FC<{ person: Person }> = ({ person }) => (
     <div className="text-sm">
-        <h5 className="font-bold">{person.ad} {person.soyad}</h5>
-        <p>{person.adres}</p>
-        <p><span className="font-semibold">Durum:</span> {person.durum}</p>
+        <h5 className="font-bold">{person.first_name} {person.last_name}</h5>
+        <p>{person.address}</p>
+        <p><span className="font-semibold">Durum:</span> {person.status}</p>
         <ReactRouterDOM.Link to={`/kisiler/${person.id}`} className="text-blue-600 font-semibold hover:underline mt-1 block">
             Detayları Görüntüle &rarr;
         </ReactRouterDOM.Link>

@@ -65,11 +65,11 @@ export class PDFGenerator {
       title: 'Kişi Listesi Raporu',
       subtitle: `Toplam ${people.length} kişi`,
       data: people.map(person => ({
-        adSoyad: `${person.ad} ${person.soyad}`,
-        kimlikNo: person.kimlikNo,
-        telefon: person.cepTelefonu,
-        durum: person.durum,
-        kayitTarihi: new Date(person.kayitTarihi).toLocaleDateString('tr-TR')
+        adSoyad: `${person.first_name} ${person.last_name}`,
+        kimlikNo: person.identity_number,
+        telefon: person.phone,
+        durum: person.status,
+        kayitTarihi: new Date(person.registration_date).toLocaleDateString('tr-TR')
       })),
       columns
     });

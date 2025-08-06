@@ -89,7 +89,7 @@ const FinansalKayitlar: React.FC = () => {
         { key: 'kategori', title: 'Kategori', render: (kayit: FinansalKayit) => kayit.kategori },
         { key: 'tutar', title: 'Tutar', render: (kayit: FinansalKayit) => (
             <span className={`font-semibold ${kayit.tur === FinansalIslemTuru.GELIR ? 'text-green-600' : 'text-red-600'}`}>
-                {kayit.tur === FinansalIslemTuru.GELIR ? '+' : '-'} {kayit.tutar.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                {kayit.tur === FinansalIslemTuru.GELIR ? '+' : '-'} {(kayit.tutar ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
             </span>
         )},
         { key: 'actions', title: 'İşlemler', render: (kayit: FinansalKayit) => (
@@ -111,9 +111,9 @@ const FinansalKayitlar: React.FC = () => {
                 </PageHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <StatCard title="Toplam Gelir" value={totalGelir.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="success" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>} />
-                    <StatCard title="Toplam Gider" value={totalGider.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="danger" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>} />
-                    <StatCard title="Bakiye" value={bakiye.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="primary" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>} />
+                    <StatCard title="Toplam Gelir" value={(totalGelir ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="success" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>} />
+                    <StatCard title="Toplam Gider" value={(totalGider ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="danger" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>} />
+                    <StatCard title="Bakiye" value={(bakiye ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })} color="primary" icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>} />
                 </div>
 
                 <div className="bg-white dark:bg-zinc-800 p-4 sm:p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">

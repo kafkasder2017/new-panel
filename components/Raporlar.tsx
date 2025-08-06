@@ -41,13 +41,13 @@ const RaporlamaAnalitik: React.FC = () => {
     }, []);
 
     const chartData = useMemo(() => {
-        const aidRecipients = people.filter(p => p.aldigiYardimTuru && p.aldigiYardimTuru.length > 0);
+        const aidRecipients = people.filter(p => p.aid_type_received && p.aid_type_received.length > 0);
         
         // Nationality Data
         const nationalityCounts = aidRecipients.reduce((acc, person) => {
-            person.uyruk.forEach(u => {
-                acc[u] = (acc[u] || 0) + 1;
-            });
+            if (person.nationality) {
+                acc[person.nationality] = (acc[person.nationality] || 0) + 1;
+            }
             return acc;
         }, {} as Record<string, number>);
         const nationalityData = Object.entries(nationalityCounts).map(([name, value]) => ({ name, value }));
@@ -121,7 +121,7 @@ const RaporlamaAnalitik: React.FC = () => {
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" />
                                 <YAxis tickFormatter={(value) => `${Number(value) / 1000}k`} />
-                                <Tooltip formatter={(value: number) => value.toLocaleString('tr-TR', {style:'currency', currency:'TRY'})}/>
+                                <Tooltip formatter={(value: number) => (value ?? 0).toLocaleString('tr-TR', {style:'currency', currency:'TRY'})}/>
                                 <Legend />
                                 <Line type="monotone" dataKey="income" name="Gelir" stroke="#10b981" strokeWidth={2} />
                                 <Line type="monotone" dataKey="expense" name="Gider" stroke="#ef4444" strokeWidth={2} />

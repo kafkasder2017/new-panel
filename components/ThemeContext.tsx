@@ -18,7 +18,7 @@ export const useTheme = () => {
   return context;
 };
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('theme') as Theme) || 'system';
@@ -70,3 +70,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     </ThemeContext.Provider>
   );
 };
+
+export default ThemeProvider;
+export { ThemeProvider };

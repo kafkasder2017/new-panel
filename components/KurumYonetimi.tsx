@@ -76,7 +76,7 @@ const KurumYonetimi: React.FC = () => {
     const columns = useMemo(() => [
         { key: 'name', title: 'Kurum Ünvanı', render: (k: Kurum) => k.resmiUnvan },
         { key: 'type', title: 'Kurum Türü', render: (k: Kurum) => k.kurumTuru },
-        { key: 'contact', title: 'Yetkili Kişi', render: (k: Kurum) => k.yetkiliKisiId ? peopleMap.get(k.yetkiliKisiId) : '-' },
+        { key: 'contact', title: 'Yetkili Kişi', render: (k: Kurum) => k.yetkiliKisiId ? peopleMap.get(k.yetkiliKisiId.toString()) : '-' },
         { key: 'phone', title: 'Telefon', render: (k: Kurum) => k.telefon },
         { key: 'status', title: 'Durum', render: (k: Kurum) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(k.status)}`}>{k.status}</span> },
         { key: 'actions', title: 'İşlemler', render: (k: Kurum) => (

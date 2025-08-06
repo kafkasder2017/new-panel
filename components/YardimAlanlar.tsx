@@ -28,15 +28,15 @@ const YardimAlanlar: React.FC = () => {
     const [editingAlan, setEditingAlan] = useState<Partial<Person> | null>(null);
 
     const yardimAlanlar = useMemo(() => {
-        return people.filter(p => p.aldigiYardimTuru && p.aldigiYardimTuru.length > 0);
+        return people.filter(p => p.aid_type_received && p.aid_type_received.length > 0);
     }, [people]);
 
     const displayedData = useMemo(() => {
         return yardimAlanlar.filter(alan => {
-            const matchesSearch = `${alan.ad} ${alan.soyad}`.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-                                  alan.kimlikNo.includes(filters.searchTerm);
-            const matchesStatus = filters.statusFilter === 'all' || alan.durum === filters.statusFilter;
-            const matchesNationality = filters.nationalityFilter === 'all' || alan.uyruk.includes(filters.nationalityFilter as Uyruk);
+            const matchesSearch = `${alan.first_name} ${alan.last_name}`.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                                  alan.identity_number?.includes(filters.searchTerm);
+            const matchesStatus = filters.statusFilter === 'all' || alan.status === filters.statusFilter;
+            const matchesNationality = filters.nationalityFilter === 'all' || alan.nationality === filters.nationalityFilter;
             return matchesSearch && matchesStatus && matchesNationality;
         });
     }, [yardimAlanlar, filters]);
@@ -50,21 +50,21 @@ const YardimAlanlar: React.FC = () => {
                 } else {
                     const payload = { 
                         ...alanToSave,
-                        kayitTarihi: new Date().toISOString(),
-                        kaydiAcanBirim: "Panel",
-                        dosyaBaglantisi: DosyaBaglantisi.DERNEK,
-                        isKaydiSil: false,
-                        uyruk: alanToSave.uyruk || [Uyruk.TC],
-                        kimlikTuru: alanToSave.kimlikTuru || KimlikTuru.TC,
-                        dogumTarihi: alanToSave.dogumTarihi || '1900-01-01',
-                        ulke: alanToSave.ulke || 'Türkiye',
-                        sehir: alanToSave.sehir || '',
-                        yerlesim: alanToSave.yerlesim || '',
-                        mahalle: alanToSave.mahalle || '',
-                        dosyaNumarasi: alanToSave.dosyaNumarasi || `DN${Date.now()}`,
-                        sponsorlukTipi: alanToSave.sponsorlukTipi || SponsorlukTipi.YOK,
-                        kayitDurumu: alanToSave.kayitDurumu || 'Kaydedildi',
-                        rizaBeyani: alanToSave.rizaBeyani || RizaBeyaniStatus.ALINDI
+                        registration_date: new Date().toISOString(),
+                        registering_unit: "Panel",
+                        file_connection: DosyaBaglantisi.DERNEK,
+                        is_record_deleted: false,
+                        nationality: alanToSave.nationality || Uyruk.TC,
+                        identity_type: alanToSave.identity_type || KimlikTuru.TC,
+                        birth_date: alanToSave.birth_date || '1900-01-01',
+                        country: alanToSave.country || 'Türkiye',
+                        city: alanToSave.city || '',
+                        district: alanToSave.district || '',
+                        neighborhood: alanToSave.neighborhood || '',
+                        file_number: alanToSave.file_number || `DN${Date.now()}`,
+                        sponsorship_type: alanToSave.sponsorship_type || SponsorlukTipi.YOK,
+                        registration_status: alanToSave.registration_status || 'Kaydedildi',
+                        consent_statement: alanToSave.consent_statement || RizaBeyaniStatus.ALINDI
                     } as Omit<Person, 'id'>;
                     await createPerson(payload);
                 }
@@ -85,11 +85,11 @@ const YardimAlanlar: React.FC = () => {
     };
     
      const columns = useMemo(() => [
-        { key: 'adSoyad', title: 'Ad Soyad', render: (value: any, u: Person) => `${u.ad} ${u.soyad}` },
-        { key: 'kimlikNo', title: 'Kimlik No', render: (value: any, u: Person) => u.kimlikNo },
-        { key: 'uyruk', title: 'Uyruk', render: (value: any, u: Person) => u.uyruk.join(', ') },
-        { key: 'sehir', title: 'Şehir', render: (value: any, u: Person) => u.sehir },
-        { key: 'durum', title: 'Durum', render: (value: any, u: Person) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(u.durum)}`}>{u.durum}</span>},
+        { key: 'adSoyad', title: 'Ad Soyad', render: (value: any, u: Person) => `${u.first_name} ${u.last_name}` },
+        { key: 'kimlikNo', title: 'Kimlik No', render: (value: any, u: Person) => u.identity_number },
+        { key: 'uyruk', title: 'Uyruk', render: (value: any, u: Person) => u.nationality },
+        { key: 'il', title: 'İl', render: (value: any, u: Person) => u.city },
+        { key: 'durum', title: 'Durum', render: (value: any, u: Person) => <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(u.status as PersonStatus)}`}>{u.status}</span>},
         { key: 'actions', title: 'İşlemler', render: (value: any, u: Person) => (
             <div className="text-right">
                 <Button variant="ghost" size="sm" onClick={() => { setEditingAlan(u); setIsModalOpen(true); }}>Düzenle</Button>
@@ -129,7 +129,7 @@ const YardimAlanFormModal: React.FC<{
     onClose: () => void,
     onSave: (alan: Partial<Person>) => void
 }> = ({ alan, onClose, onSave }) => {
-    const [formData, setFormData] = useState<Partial<Person>>(alan || { aldigiYardimTuru: [], uyruk: [] });
+    const [formData, setFormData] = useState<Partial<Person>>(alan || { aid_type_received: [], nationality: Uyruk.TC });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -138,11 +138,11 @@ const YardimAlanFormModal: React.FC<{
 
     const handleYardimTuruChange = (tur: YardimTuruDetay) => {
         setFormData(prev => {
-            const currentTuru = prev.aldigiYardimTuru || [];
+            const currentTuru = prev.aid_type_received || [];
             const newTuru = currentTuru.includes(tur)
                 ? currentTuru.filter(t => t !== tur)
                 : [...currentTuru, tur];
-            return { ...prev, aldigiYardimTuru: newTuru };
+            return { ...prev, aid_type_received: newTuru };
         });
     };
     
@@ -157,16 +157,16 @@ const YardimAlanFormModal: React.FC<{
         <Modal isOpen={true} onClose={onClose} title={isNew ? 'Yeni Yardım Alan Ekle' : 'Yardım Alan Bilgilerini Düzenle'}>
             <form onSubmit={handleSubmit} className="space-y-4">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Ad" name="ad" value={formData.ad || ''} onChange={handleChange} required />
-                    <Input label="Soyad" name="soyad" value={formData.soyad || ''} onChange={handleChange} required />
-                    <Input label="Kimlik No" name="kimlikNo" value={formData.kimlikNo || ''} onChange={handleChange} required />
-                    <Select label="Durum" name="durum" value={formData.durum || ''} onChange={handleChange} options={Object.values(PersonStatus).map(s => ({value:s, label: s}))} required/>
+                    <Input label="Ad" name="first_name" value={formData.first_name || ''} onChange={handleChange} required />
+                    <Input label="Soyad" name="last_name" value={formData.last_name || ''} onChange={handleChange} required />
+                    <Input label="Kimlik No" name="identity_number" value={formData.identity_number || ''} onChange={handleChange} required />
+                    <Select label="Durum" name="status" value={formData.status || ''} onChange={handleChange} options={Object.values(PersonStatus).map(s => ({value:s, label: s}))} required/>
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-2">Aldığı Yardım Türleri</label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                             {Object.values(YardimTuruDetay).map(tur => (
-                                <label key={tur} className={`flex items-center space-x-2 p-2 border rounded-lg cursor-pointer text-sm ${formData.aldigiYardimTuru?.includes(tur) ? 'bg-blue-100 border-blue-300' : 'border-slate-200'}`}>
-                                    <input type="checkbox" checked={formData.aldigiYardimTuru?.includes(tur)} onChange={() => handleYardimTuruChange(tur)} className="rounded"/>
+                                <label key={tur} className={`flex items-center space-x-2 p-2 border rounded-lg cursor-pointer text-sm ${formData.aid_type_received?.includes(tur) ? 'bg-blue-100 border-blue-300' : 'border-slate-200'}`}>
+                                    <input type="checkbox" checked={formData.aid_type_received?.includes(tur)} onChange={() => handleYardimTuruChange(tur)} className="rounded"/>
                                     <span>{tur}</span>
                                 </label>
                             ))}

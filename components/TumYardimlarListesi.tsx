@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { Odeme, AyniYardimIslemi, Person, DepoUrunu, OdemeTuru } from '../types';
 import { getOdemeler, getAyniYardimIslemleri, getPeople, getDepoUrunleri } from '../services/apiService';
@@ -57,7 +57,7 @@ const TumYardimlarListesi: React.FC = () => {
         }
     }, [kisiAdiFromQuery]);
 
-    const peopleMap = useMemo(() => new Map(people.map(p => [p.id, `${p.ad} ${p.soyad}`])), [people]);
+    const peopleMap = useMemo(() => new Map(people.map(p => [p.id, `${p.first_name} ${p.last_name}`])), [people]);
     const productsMap = useMemo(() => new Map(products.map(p => [p.id, p.name])), [products]);
 
     const birlesikYardimlar = useMemo((): BirlesikYardim[] => {
@@ -75,7 +75,7 @@ const TumYardimlarListesi: React.FC = () => {
         
         const ayniYardimlar: BirlesikYardim[] = inKindAids.map(a => ({
             id: `ayni-${a.id}`,
-            kisiAdi: peopleMap.get(a.kisiId) || 'Bilinmeyen Kişi',
+            kisiAdi: peopleMap.get(String(a.kisiId)) || 'Bilinmeyen Kişi',
             yardimTipi: 'Ayni',
             aciklama: productsMap.get(a.urunId) || 'Bilinmeyen Ürün',
             tutarMiktar: `${a.miktar} ${a.birim}`,
@@ -104,6 +104,42 @@ const TumYardimlarListesi: React.FC = () => {
         return <div className="p-4 bg-red-100 text-red-700 rounded-lg">{error}</div>;
     }
     
+    // Sanallaştırma: bağımlılıksız windowing
+    const containerRef = useRef<HTMLDivElement>(null);
+    const rowHeight = 56; // px
+    const overscan = 8;
+
+    const [scrollTop, setScrollTop] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(600);
+
+    const onScroll = useCallback(() => {
+        if (!containerRef.current) return;
+        setScrollTop(containerRef.current.scrollTop);
+    }, []);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const handleResize = () => setViewportHeight(el.clientHeight);
+        handleResize();
+        el.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', handleResize);
+        return () => {
+            el.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [onScroll]);
+
+    const total = filteredYardimlar.length;
+    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+    const endIndex = Math.min(
+        total,
+        Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan
+    );
+    const items = filteredYardimlar.slice(startIndex, endIndex);
+    const topSpacer = startIndex * rowHeight;
+    const bottomSpacer = (total - endIndex) * rowHeight;
+
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 mb-6">
@@ -131,32 +167,50 @@ const TumYardimlarListesi: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-500">
-                    <thead className="text-xs text-slate-700 uppercase bg-slate-50">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 font-semibold">Tarih</th>
-                            <th scope="col" className="px-6 py-3 font-semibold">Kişi</th>
-                            <th scope="col" className="px-6 py-3 font-semibold">Yardım Tipi</th>
-                            <th scope="col" className="px-6 py-3 font-semibold">Açıklama / Ürün</th>
-                            <th scope="col" className="px-6 py-3 font-semibold text-right">Tutar / Miktar</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                        {filteredYardimlar.map((yardim) => (
-                            <tr key={yardim.id} className="hover:bg-slate-50">
-                                <td className="px-6 py-4">{new Date(yardim.tarih).toLocaleDateString('tr-TR')}</td>
-                                <td className="px-6 py-4 font-medium text-slate-900">{yardim.kisiAdi}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${yardim.yardimTipi === 'Nakit' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
-                                        {yardim.yardimTipi}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-slate-600">{yardim.aciklama}</td>
-                                <td className="px-6 py-4 text-right font-semibold text-slate-700">{yardim.tutarMiktar}</td>
+                <div
+                    ref={containerRef}
+                    className="max-h-[70vh] overflow-y-auto"
+                    aria-label="Tüm Yardımlar Scroll Container"
+                >
+                    <table className="w-full text-sm text-left text-slate-500">
+                        <thead className="sticky top-0 z-10 text-xs text-slate-700 uppercase bg-slate-50">
+                            <tr>
+                                <th scope="col" className="px-6 py-3 font-semibold">Tarih</th>
+                                <th scope="col" className="px-6 py-3 font-semibold">Kişi</th>
+                                <th scope="col" className="px-6 py-3 font-semibold">Yardım Tipi</th>
+                                <th scope="col" className="px-6 py-3 font-semibold">Açıklama / Ürün</th>
+                                <th scope="col" className="px-6 py-3 font-semibold text-right">Tutar / Miktar</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                            {topSpacer > 0 && (
+                                <tr style={{ height: topSpacer }}>
+                                    <td colSpan={5} />
+                                </tr>
+                            )}
+
+                            {items.map((yardim) => (
+                                <tr key={yardim.id} className="hover:bg-slate-50" style={{ height: rowHeight }}>
+                                    <td className="px-6 py-4">{new Date(yardim.tarih).toLocaleDateString('tr-TR')}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-900">{yardim.kisiAdi}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${yardim.yardimTipi === 'Nakit' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                                            {yardim.yardimTipi}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-600">{yardim.aciklama}</td>
+                                    <td className="px-6 py-4 text-right font-semibold text-slate-700">{yardim.tutarMiktar}</td>
+                                </tr>
+                            ))}
+
+                            {bottomSpacer > 0 && (
+                                <tr style={{ height: bottomSpacer }}>
+                                    <td colSpan={5} />
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             {filteredYardimlar.length === 0 && (
                 <div className="text-center py-10 text-slate-500">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -32,7 +33,7 @@ export const usePWA = () => {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registered:', registration);
+          logger.info('Service Worker registered successfully');
           setState(prev => ({ ...prev, isServiceWorkerReady: true }));
         })
         .catch((error) => {
@@ -97,9 +98,9 @@ export const usePWA = () => {
         const choiceResult = await state.installPrompt.userChoice;
         
         if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
+          logger.info('User accepted PWA install prompt');
         } else {
-          console.log('User dismissed the install prompt');
+          logger.info('User dismissed PWA install prompt');
         }
         
         setState(prev => ({ ...prev, installPrompt: null, isInstallable: false }));

@@ -6,6 +6,8 @@ import { createYetim, updateYetim, deleteYetim } from '../services/apiService.ts
 import { useOrphans } from '../hooks/useData.ts';
 import { PageHeader, Table, Input, Select, Button } from './ui';
 import Modal from './Modal.tsx';
+import AdvancedFilter from '../src/components/AdvancedFilter';
+import SmartSearch from '../src/components/SmartSearch';
 
 const getStatusClass = (status: DestekDurumu) => {
     return status === DestekDurumu.DESTEK_ALIYOR ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
@@ -31,6 +33,8 @@ const YetimYonetimi: React.FC = () => {
         statusFilter: 'all' as DestekDurumu | 'all',
         educationFilter: 'all' as EgitimSeviyesi | 'all',
     });
+    
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingYetim, setEditingYetim] = useState<Partial<Yetim> | null>(null);
@@ -101,11 +105,46 @@ const YetimYonetimi: React.FC = () => {
                 <Button onClick={() => { setEditingYetim({}); setIsModalOpen(true); }}>Yeni Yetim Ekle</Button>
             </PageHeader>
             <div className="bg-white dark:bg-zinc-800 p-4 sm:p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
+                {/* Akıllı Arama */}
+                <SmartSearch
+                    placeholder="Yetim ara..."
+                    onSearch={(query) => setFilters(f => ({ ...f, searchTerm: query }))}
+                />
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <Input type="text" placeholder="Yetim veya veli adı..." value={filters.searchTerm} onChange={e => setFilters(f=>({...f, searchTerm: e.target.value}))}/>
                     <Select value={filters.educationFilter} onChange={e => setFilters(f=>({...f, educationFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Eğitim Seviyeleri'}, ...Object.values(EgitimSeviyesi).map(v=>({value:v, label:v}))]}/>
                     <Select value={filters.statusFilter} onChange={e => setFilters(f=>({...f, statusFilter: e.target.value as any}))} options={[{value:'all', label: 'Tüm Destek Durumları'}, ...Object.values(DestekDurumu).map(v=>({value:v, label:v}))]}/>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className="flex items-center gap-2"
+                    >
+                        Gelişmiş Filtreler
+                    </Button>
                 </div>
+                
+                {/* Gelişmiş Filtreler */}
+                {showAdvancedFilters && (
+                    <AdvancedFilter
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                        filterOptions={[
+                            { key: 'status', label: 'Durum', type: 'select', options: [
+                                { value: 'aktif', label: 'Aktif' },
+                                { value: 'pasif', label: 'Pasif' }
+                            ]},
+                            { key: 'egitimDurumu', label: 'Eğitim Durumu', type: 'select', options: [
+                                { value: 'okul_oncesi', label: 'Okul Öncesi' },
+                                { value: 'ilkokul', label: 'İlkokul' },
+                                { value: 'ortaokul', label: 'Ortaokul' },
+                                { value: 'lise', label: 'Lise' },
+                                { value: 'universite', label: 'Üniversite' }
+                            ]},
+                            { key: 'yas', label: 'Yaş', type: 'numberRange' }
+                        ]}
+                    />
+                )}
+                
                 <Table columns={columns} data={filteredYetimler} />
             </div>
 

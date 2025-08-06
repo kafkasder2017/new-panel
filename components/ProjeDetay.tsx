@@ -165,11 +165,11 @@ const ProjeDetay: React.FC = () => {
                         </thead>
                         <tbody>
                             {filteredGorevler.map((gorev) => {
-                                const sorumlu = people.find(p => p.id === gorev.sorumluId);
+                                const sorumlu = people.find(p => p.id === String(gorev.sorumluId));
                                 return (
                                 <tr key={gorev.id} className="bg-white border-b hover:bg-slate-50">
                                     <td className="px-6 py-4 font-medium text-slate-900">{gorev.baslik}</td>
-                                    <td className="px-6 py-4">{sorumlu ? `${sorumlu.ad} ${sorumlu.soyad}` : 'Atanmamış'}</td>
+                                    <td className="px-6 py-4">{sorumlu ? `${sorumlu.first_name} ${sorumlu.last_name}` : 'Atanmamış'}</td>
                                     <td className="px-6 py-4">{new Date(gorev.sonTarih).toLocaleDateString('tr-TR')}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center">
@@ -254,7 +254,7 @@ const GorevFormModal: React.FC<{ gorev: Partial<Gorev>; people: Person[]; onClos
                         >
                             <option value="" disabled>Bir kişi seçin...</option>
                             {people.map(person => (
-                                <option key={person.id} value={person.id}>{person.ad} {person.soyad}</option>
+                                <option key={person.id} value={person.id}>{person.first_name} {person.last_name}</option>
                             ))}
                         </select>
                     </div>
