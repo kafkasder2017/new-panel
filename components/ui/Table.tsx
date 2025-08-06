@@ -45,18 +45,23 @@ const Pagination: React.FC<PaginationProps> = ({ current, total, pageSize, onCha
   }
   
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+    <nav 
+      className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+      role="navigation"
+      aria-label="Tablo sayfalama"
+    >
       <div className="flex items-center">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
+        <p className="text-sm text-gray-700 dark:text-gray-300" aria-live="polite">
           Toplam <span className="font-medium">{total}</span> kayıt
         </p>
       </div>
       
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2" role="group" aria-label="Sayfa navigasyonu">
         <button
           onClick={() => onChange(current - 1)}
           disabled={current === 1}
           className="px-3 py-1 text-sm rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Önceki sayfaya git"
         >
           Önceki
         </button>
@@ -70,6 +75,8 @@ const Pagination: React.FC<PaginationProps> = ({ current, total, pageSize, onCha
                 ? 'bg-primary-600 text-white'
                 : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
+            aria-label={`Sayfa ${page}${page === current ? ', mevcut sayfa' : ''}`}
+            aria-current={page === current ? 'page' : undefined}
           >
             {page}
           </button>
@@ -79,11 +86,12 @@ const Pagination: React.FC<PaginationProps> = ({ current, total, pageSize, onCha
           onClick={() => onChange(current + 1)}
           disabled={current === totalPages}
           className="px-3 py-1 text-sm rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Sonraki sayfaya git"
         >
           Sonraki
         </button>
       </div>
-    </div>
+    </nav>
   );
 };
 
@@ -133,10 +141,15 @@ export const Table: React.FC<TableProps> = ({
   return (
     <div className={`overflow-hidden bg-white dark:bg-gray-800 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 ${className}`}>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table 
+          className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+          role="table"
+          aria-label="Veri tablosu"
+          aria-rowcount={paginatedData.length + 1}
+        >
           <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              {columns.map((column) => (
+            <tr role="row">
+              {columns.map((column, index) => (
                 <th
                   key={column.key}
                   className={`px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${
@@ -144,11 +157,25 @@ export const Table: React.FC<TableProps> = ({
                   } ${column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600' : ''}`}
                   style={{ width: column.width }}
                   onClick={() => column.sortable && handleSort(column.key)}
+                  onKeyDown={(e) => {
+                    if (column.sortable && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      handleSort(column.key);
+                    }
+                  }}
+                  tabIndex={column.sortable ? 0 : -1}
+                  role="columnheader"
+                  aria-sort={
+                    column.sortable && sortColumn === column.key
+                      ? sortDirection === 'asc' ? 'ascending' : 'descending'
+                      : column.sortable ? 'none' : undefined
+                  }
+                  aria-colindex={index + 1}
                 >
                   <div className="flex items-center space-x-1">
                     <span>{column.title}</span>
                     {column.sortable && sortColumn === column.key && (
-                      <span className="text-primary-600">
+                      <span className="text-primary-600" aria-hidden="true">
                         {sortDirection === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
@@ -161,18 +188,18 @@ export const Table: React.FC<TableProps> = ({
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               Array.from({ length: pageSize }).map((_, index) => (
-                <tr key={index} className="animate-pulse">
+                <tr key={index} className="animate-pulse" role="row" aria-rowindex={index + 2}>
                   {columns.map((column, colIndex) => (
-                    <td key={colIndex} className="px-6 py-4">
+                    <td key={colIndex} className="px-6 py-4" role="cell" aria-colindex={colIndex + 1}>
                       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" style={{ width: colIndex === 0 ? '90%' : colIndex % 2 === 0 ? '70%' : '50%' }}></div>
                     </td>
                   ))}
                 </tr>
               ))
             ) : paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-6 py-8 text-center">
-                  <div className="text-gray-500 dark:text-gray-400">{emptyText}</div>
+              <tr role="row">
+                <td colSpan={columns.length} className="px-6 py-8 text-center" role="cell">
+                  <div className="text-gray-500 dark:text-gray-400" role="status" aria-live="polite">{emptyText}</div>
                 </td>
               </tr>
             ) : (
@@ -186,13 +213,24 @@ export const Table: React.FC<TableProps> = ({
                     ${onRowClick ? 'cursor-pointer' : ''}
                   `}
                   onClick={() => onRowClick?.(record)}
+                  onKeyDown={(e) => {
+                    if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      onRowClick(record);
+                    }
+                  }}
+                  tabIndex={onRowClick ? 0 : -1}
+                  role="row"
+                  aria-rowindex={index + 2}
                 >
-                  {columns.map((column) => (
+                  {columns.map((column, colIndex) => (
                     <td
                       key={column.key}
                       className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 ${
                         column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'
                       }`}
+                      role="cell"
+                      aria-colindex={colIndex + 1}
                     >
                       {column.render
                         ? column.render(record[column.key], record)

@@ -102,7 +102,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </div>
 
                     <div>
-                        <label htmlFor="password"className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                             Şifre
                         </label>
                         <div className="mt-1">

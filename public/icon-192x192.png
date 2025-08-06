@@ -1,53 +1,6 @@
 <svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="192" height="192" rx="24" fill="#3b82f6"/>
-  <rect x="16" y="16" width="160" height="160" rx="16" fill="white" fill-opacity="0.1"/>
-  
-  <!-- Main Icon - Building/Organization -->
-  <g transform="translate(48, 48)">
-    <!-- Building base -->
-    <rect x="12" y="32" width="72" height="64" rx="4" fill="white" fill-opacity="0.9"/>
-    
-    <!-- Building top -->
-    <rect x="20" y="20" width="56" height="20" rx="2" fill="white"/>
-    
-    <!-- Windows -->
-    <rect x="28" y="28" width="8" height="8" rx="1" fill="#3b82f6"/>
-    <rect x="44" y="28" width="8" height="8" rx="1" fill="#3b82f6"/>
-    <rect x="60" y="28" width="8" height="8" rx="1" fill="#3b82f6"/>
-    
-    <rect x="28" y="44" width="8" height="8" rx="1" fill="#3b82f6"/>
-    <rect x="44" y="44" width="8" height="8" rx="1" fill="#3b82f6"/>
-    <rect x="60" y="44" width="8" height="8" rx="1" fill="#3b82f6"/>
-    
-    <rect x="28" y="60" width="8" height="8" rx="1" fill="#3b82f6"/>
-    <rect x="44" y="60" width="8" height="8" rx="1" fill="#3b82f6"/>
-    <rect x="60" y="60" width="8" height="8" rx="1" fill="#3b82f6"/>
-    
-    <!-- Door -->
-    <rect x="40" y="76" width="16" height="20" rx="2" fill="#3b82f6"/>
-    <circle cx="52" cy="86" r="1" fill="white"/>
-    
-    <!-- Flag pole -->
-    <rect x="4" y="8" width="2" height="88" fill="white"/>
-    
-    <!-- Flag -->
-    <path d="M6 8 L32 8 L28 16 L32 24 L6 24 Z" fill="#ef4444"/>
-    
-    <!-- People icons -->
-    <g transform="translate(88, 60)">
-      <circle cx="4" cy="4" r="3" fill="white"/>
-      <rect x="1" y="8" width="6" height="8" rx="3" fill="white"/>
-    </g>
-    
-    <g transform="translate(88, 80)">
-      <circle cx="4" cy="4" r="3" fill="white" fill-opacity="0.8"/>
-      <rect x="1" y="8" width="6" height="8" rx="3" fill="white" fill-opacity="0.8"/>
-    </g>
-  </g>
-  
-  <!-- Decorative elements -->
-  <circle cx="32" cy="32" r="2" fill="white" fill-opacity="0.3"/>
-  <circle cx="160" cy="160" r="2" fill="white" fill-opacity="0.3"/>
-  <circle cx="160" cy="32" r="1" fill="white" fill-opacity="0.2"/>
-  <circle cx="32" cy="160" r="1" fill="white" fill-opacity="0.2"/>
+  <path d="M48 96L96 48L144 96L96 144L48 96Z" fill="white"/>
+  <circle cx="96" cy="96" r="16" fill="#3b82f6"/>
+  <text x="96" y="160" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold">KAFKASDER</text>
 </svg>

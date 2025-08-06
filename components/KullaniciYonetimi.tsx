@@ -35,7 +35,7 @@ const KullaniciYonetimi: React.FC = () => {
     const filteredKullanicilar = useMemo(() => {
         return kullanicilar.filter(kullanici => {
             const lowerSearch = filters.searchTerm.toLowerCase();
-            const matchesSearch = kullanici.kullaniciAdi.toLowerCase().includes(lowerSearch) ||
+            const matchesSearch = kullanici.kullanici_adi.toLowerCase().includes(lowerSearch) ||
                                   kullanici.email.toLowerCase().includes(lowerSearch);
             const matchesRole = filters.roleFilter === 'all' || kullanici.rol === filters.roleFilter;
             const matchesStatus = filters.statusFilter === 'all' || kullanici.durum === filters.statusFilter;
@@ -87,10 +87,10 @@ const KullaniciYonetimi: React.FC = () => {
     };
 
     const columns = useMemo(() => [
-        { key: 'kullaniciAdi', title: 'Kullanıcı Adı', render: (k: Kullanici) => k.kullaniciAdi },
+        { key: 'kullanici_adi', title: 'Kullanıcı Adı', render: (k: Kullanici) => k.kullanici_adi },
         { key: 'email', title: 'E-posta', render: (k: Kullanici) => k.email },
         { key: 'rol', title: 'Rol', render: (k: Kullanici) => <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleClass(k.rol)}`}>{k.rol}</span> },
-        { key: 'sonGiris', title: 'Son Giriş', render: (k: Kullanici) => k.sonGiris ? new Date(k.sonGiris).toLocaleString('tr-TR') : 'Hiç' },
+        { key: 'son_giris', title: 'Son Giriş', render: (k: Kullanici) => k.son_giris ? new Date(k.son_giris).toLocaleString('tr-TR') : 'Hiç' },
         { key: 'durum', title: 'Durum', render: (k: Kullanici) => <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(k.durum)}`}>{k.durum}</span> },
         { key: 'actions', title: 'İşlemler', render: (k: Kullanici) => (
              <div className="flex items-center justify-end space-x-1">
@@ -146,7 +146,7 @@ const KullaniciFormModal: React.FC<{ kullanici: Partial<Kullanici>, onClose: () 
         <Modal isOpen={true} onClose={onClose} title={isNewUser ? 'Yeni Kullanıcı Ekle' : 'Kullanıcıyı Düzenle'}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Kullanıcı Adı" name="kullaniciAdi" value={formData.kullaniciAdi || ''} onChange={handleChange} required />
+                    <Input label="Kullanıcı Adı" name="kullanici_adi" value={formData.kullanici_adi || ''} onChange={handleChange} required />
                     <Input label="E-posta" type="email" name="email" value={formData.email || ''} onChange={handleChange} required disabled={!isNewUser} />
                     <Select label="Rol" name="rol" value={formData.rol || ''} onChange={handleChange} options={[{value:'', label:'Seçiniz...'}, ...Object.values(KullaniciRol).map(rol => ({value:rol, label:rol}))]} required />
                      {isNewUser && (

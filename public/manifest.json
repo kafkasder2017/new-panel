@@ -1,16 +1,13 @@
 {
-  "name": "Kafkasder Panel",
-  "short_name": "Kafkasder",
-  "description": "Kafkas Derneği Yönetim Paneli - Üye, bağış ve proje yönetimi için kapsamlı platform",
+  "name": "KAFKASDER Yönetim Paneli",
+  "short_name": "KAFKASDER",
+  "description": "Kafkas Kültür ve Dayanışma Derneği Yönetim Paneli",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
   "scope": "/",
-  "lang": "tr",
-  "dir": "ltr",
-  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -23,48 +20,9 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/screenshot-narrow.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Ana Sayfa",
-      "description": "Ana dashboard sayfasına git",
-      "url": "/",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Üyeler",
-      "short_name": "Üyeler",
-      "description": "Üye listesini görüntüle",
-      "url": "/members",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Bağışlar",
-      "short_name": "Bağışlar",
-      "description": "Bağış listesini görüntüle",
-      "url": "/donations",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
-    }
-  ]
+  "categories": ["business", "productivity"],
+  "lang": "tr",
+  "dir": "ltr"
 }

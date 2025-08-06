@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { Bagis, BagisTuru, Person, Proje } from '../types';
 import { createBagis, updateBagis, deleteBagis } from '../services/apiService';
 import { useBagisYonetimi } from '../hooks/useData';
+import { usePDFGenerator } from '../src/hooks/usePDFGenerator';
+import { useExcelUtils } from '../src/hooks/useExcelUtils';
 import Modal from './Modal';
 import { PageHeader, StatCard, Table, Input, Select, Textarea, Button } from './ui';
 
@@ -13,6 +15,14 @@ interface BagisYonetimiProps {
 const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) => {
     const { data, isLoading, error, refresh } = useBagisYonetimi();
     const { donations, people, projects } = data;
+    const { generateDonationReport, isGenerating } = usePDFGenerator();
+    const { 
+        exportDonations, 
+        importDonations, 
+        generateDonationTemplate, 
+        isExporting, 
+        isImporting 
+    } = useExcelUtils();
 
     const [filters, setFilters] = useState({ searchTerm: '', typeFilter: initialFilter });
     
@@ -84,6 +94,28 @@ const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) 
         }
     };
 
+    const handleExportExcel = () => {
+        exportDonations(filteredDonations);
+    };
+
+    const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const result = await importDonations(file);
+        if (result && result.validRows > 0) {
+            // Refresh the data after successful import
+            refresh();
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    };
+
+    const handleGenerateTemplate = () => {
+        generateDonationTemplate();
+    };
+
     const columns = useMemo(() => [
         { key: 'bagisciId', title: 'Bağışçı', render: (d: Bagis) => peopleMap.get(d.bagisciId) || 'Bilinmeyen Kişi' },
         { key: 'tutar', title: 'Tutar', render: (d: Bagis) => <span className="font-semibold text-green-600">{d.tutar.toLocaleString('tr-TR', { style: 'currency', currency: d.paraBirimi })}</span> },
@@ -105,7 +137,48 @@ const BagisYonetimi: React.FC<BagisYonetimiProps> = ({ initialFilter = 'all' }) 
     return (
         <>
             <PageHeader title="Bağış Yönetimi">
-                <Button onClick={() => { setEditingDonation({}); setIsFormModalOpen(true); }}>Yeni Bağış Ekle</Button>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleImportExcel}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={isImporting}
+                        />
+                        <Button 
+                            disabled={isImporting}
+                            variant="outline"
+                            className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {isImporting ? 'İçe Aktarılıyor...' : 'Excel\'den İçe Aktar'}
+                        </Button>
+                    </div>
+                    <Button 
+                        onClick={handleGenerateTemplate}
+                        variant="outline"
+                        className="bg-orange-600 text-white hover:bg-orange-700"
+                    >
+                        Template İndir
+                    </Button>
+                    <Button 
+                        onClick={handleExportExcel} 
+                        disabled={isExporting || filteredDonations.length === 0}
+                        variant="outline"
+                        className="bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                        {isExporting ? 'Dışa Aktarılıyor...' : 'Excel\'e Aktar'}
+                    </Button>
+                    <Button 
+                        onClick={() => generateDonationReport(filteredDonations)} 
+                        disabled={isGenerating || filteredDonations.length === 0}
+                        variant="outline"
+                        className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                        {isGenerating ? 'PDF Oluşturuluyor...' : 'PDF Rapor'}
+                    </Button>
+                    <Button onClick={() => { setEditingDonation({}); setIsFormModalOpen(true); }}>Yeni Bağış Ekle</Button>
+                </div>
             </PageHeader>
             <div className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

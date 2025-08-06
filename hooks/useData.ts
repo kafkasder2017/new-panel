@@ -88,11 +88,11 @@ export function useSupabaseQuery<T extends { id: any }>(tableName: string, optio
 }
 
 // Exported hooks for each module
-export const usePeople = () => useSupabaseQuery<Person>('kisiler', { realtime: true });
-export const useProjects = () => useSupabaseQuery<Proje>('projeler');
+export const usePeople = () => useSupabaseQuery<Person>('people', { realtime: true });
+export const useProjects = () => useSupabaseQuery<Proje>('projects');
 export const useApplications = () => {
-    const { data: applications, isLoading: isLoadingApps, error: errorApps, refresh: refreshApps } = useSupabaseQuery<YardimBasvurusu>('yardim_basvurulari');
-    const { data: people, isLoading: isLoadingPeople, error: errorPeople, refresh: refreshPeople } = useSupabaseQuery<Person>('kisiler');
+    const { data: applications, isLoading: isLoadingApps, error: errorApps, refresh: refreshApps } = useSupabaseQuery<YardimBasvurusu>('aid_applications');
+    const { data: people, isLoading: isLoadingPeople, error: errorPeople, refresh: refreshPeople } = useSupabaseQuery<Person>('people');
     
     return {
         data: { applications, people },
@@ -106,7 +106,7 @@ export const useScholarships = () => useSupabaseQuery<OgrenciBursu>('ogrenci_bur
 export const useOrphans = () => useSupabaseQuery<Yetim>('yetimler');
 export const useFinancialRecords = () => {
     const { data: records, isLoading: isLoadingRecords, error: errorRecords, refresh: refreshRecords } = useSupabaseQuery<FinansalKayit>('finansal_kayitlar');
-    const { data: projects, isLoading: isLoadingProjects, error: errorProjects, refresh: refreshProjects } = useSupabaseQuery<Proje>('projeler');
+    const { data: projects, isLoading: isLoadingProjects, error: errorProjects, refresh: refreshProjects } = useSupabaseQuery<Proje>('projects');
     return {
         data: { records, projects },
         isLoading: isLoadingRecords || isLoadingProjects,
@@ -120,41 +120,41 @@ export const useStockItems = () => useSupabaseQuery<DepoUrunu>('depo_urunleri');
 export const useVefaSupport = () => useSupabaseQuery<VefaDestek>('vefa_destek');
 export const useKurumYonetimi = () => {
     const { data: kurumlar, ...rest } = useSupabaseQuery<Kurum>('kurumlar');
-    const { data: people } = useSupabaseQuery<Person>('kisiler');
+    const { data: people } = useSupabaseQuery<Person>('people');
     return { data: { kurumlar, people }, ...rest };
 };
 export const useUyeYonetimi = () => {
-    const { data: people, ...rest } = useSupabaseQuery<Person>('kisiler');
+    const { data: people, ...rest } = useSupabaseQuery<Person>('people');
     const uyeler = people.filter(p => p.membershipType && p.membershipType !== MembershipType.GONULLU);
     return { data: uyeler, ...rest };
 };
 export const useGonulluYonetimi = () => {
     const { data: gonulluler, ...rest } = useSupabaseQuery<Gonullu>('gonulluler');
-    const { data: people } = useSupabaseQuery<Person>('kisiler');
+    const { data: people } = useSupabaseQuery<Person>('people');
     return { data: { gonulluler, people }, ...rest };
 };
 export const useKullaniciYonetimi = () => useSupabaseQuery<Kullanici>('kullanicilar');
 export const useAyniYardimIslemleri = () => {
     const { data: islemler, ...rest } = useSupabaseQuery<AyniYardimIslemi>('ayni_yardim_islemleri');
-    const { data: people } = useSupabaseQuery<Person>('kisiler');
+    const { data: people } = useSupabaseQuery<Person>('people');
     const { data: products } = useSupabaseQuery<DepoUrunu>('depo_urunleri');
     return { data: { islemler, people, products }, ...rest };
 };
 export const useBagisYonetimi = () => {
-    const { data: donations, ...rest } = useSupabaseQuery<Bagis>('bagislar');
-    const { data: people } = useSupabaseQuery<Person>('kisiler');
-    const { data: projects } = useSupabaseQuery<Proje>('projeler');
+    const { data: donations, ...rest } = useSupabaseQuery<Bagis>('donations');
+    const { data: people } = useSupabaseQuery<Person>('people');
+    const { data: projects } = useSupabaseQuery<Proje>('projects');
     return { data: { donations, people, projects }, ...rest };
 };
 export const useDenetimKayitlari = () => useSupabaseQuery<DenetimKaydi>('denetim_kayitlari');
 export const useHizmetTakip = () => {
     const { data: hizmetler, ...rest } = useSupabaseQuery<Hizmet>('hizmetler');
-    const { data: people } = useSupabaseQuery<Person>('kisiler');
+    const { data: people } = useSupabaseQuery<Person>('people');
     return { data: { hizmetler, people }, ...rest };
 };
 export const useHastaneSevk = () => {
     const { data: sevkler, ...rest } = useSupabaseQuery<HastaneSevk>('hastane_sevkler');
-    const { data: people } = useSupabaseQuery<Person>('kisiler');
+    const { data: people } = useSupabaseQuery<Person>('people');
     return { data: { sevkler, people }, ...rest };
 };
 

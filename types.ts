@@ -823,11 +823,11 @@ export enum KullaniciDurum {
 
 export interface Kullanici {
     id: number;
-    kullaniciAdi: string;
+    kullanici_adi: string;
     email: string;
     rol: KullaniciRol;
     durum: KullaniciDurum;
-    sonGiris?: string;
+    son_giris?: string;
 }
 
 // Gönüllü Yönetimi Types
@@ -955,24 +955,25 @@ export type DosyaSistemiOgesi = Dosya | Klasor;
 
 // Bildirimler Types
 export enum BildirimTuru {
-    SISTEM = 'Sistem',
-    KULLANICI = 'Kullanıcı',
-    TOPLU = 'Toplu Duyuru',
+    SISTEM = 'SYSTEM',
+    KULLANICI = 'INFO',
+    TOPLU = 'INFO',
 }
 
 export enum BildirimDurumu {
-    OKUNMADI = 'Okunmadı',
-    OKUNDU = 'Okundu',
+    OKUNMADI = 'false',
+    OKUNDU = 'true',
 }
 
 export interface Bildirim {
-    id: number;
-    tur: BildirimTuru;
-    baslik: string;
-    icerik: string;
-    tarih: string;
-    durum: BildirimDurumu;
-    gonderen?: string; // For Kullanıcı type
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    created_at: string;
+    is_read: boolean;
+    user_id?: string;
+    action_url?: string;
 }
 
 
@@ -1117,4 +1118,192 @@ export interface PersonSummaryInput {
         en?: string;
         ar?: string;
     };
+}
+
+// Yeni Tablolar için Type Tanımları
+
+// Enum Tanımları
+export enum NotificationType {
+    INFO = 'INFO',
+    WARNING = 'WARNING',
+    ERROR = 'ERROR',
+    SUCCESS = 'SUCCESS',
+    REMINDER = 'REMINDER',
+    SYSTEM = 'SYSTEM'
+}
+
+export enum FileUploadEntityType {
+    PERSON = 'person',
+    PROJECT = 'project',
+    FINANCIAL = 'financial',
+    DONATION = 'donation',
+    APPLICATION = 'application',
+    OTHER = 'other'
+}
+
+export enum PaymentMethod {
+    NAKIT = 'NAKIT',
+    BANKA_TRANSFERI = 'BANKA_TRANSFERI',
+    KREDI_KARTI = 'KREDI_KARTI',
+    HAVALE = 'HAVALE',
+    CEK = 'ÇEK',
+    DIGER = 'DIGER'
+}
+
+export enum MembershipStatus {
+    AKTIF = 'AKTIF',
+    PASIF = 'PASIF',
+    ASKIDA = 'ASKIDA',
+    IPTAL = 'IPTAL'
+}
+
+export enum MembershipFeeStatus {
+    BEKLEMEDE = 'BEKLEMEDE',
+    ODENDI = 'ODENDI',
+    GECIKTI = 'GECIKTI',
+    IPTAL = 'IPTAL'
+}
+
+export enum CampaignStatus {
+    AKTIF = 'AKTIF',
+    TAMAMLANDI = 'TAMAMLANDI',
+    IPTAL = 'IPTAL',
+    BEKLEMEDE = 'BEKLEMEDE'
+}
+
+export enum PersonNoteType {
+    GENEL = 'GENEL',
+    YARDIM = 'YARDIM',
+    SAGLIK = 'SAGLIK',
+    SOSYAL = 'SOSYAL',
+    FINANSAL = 'FINANSAL',
+    HUKUKI = 'HUKUKI',
+    ACIL = 'ACIL'
+}
+
+// User Sessions
+export interface UserSession {
+    id: string;
+    user_id: string;
+    session_token: string;
+    ip_address?: string;
+    user_agent?: string;
+    login_time: string;
+    logout_time?: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+// Failed Login Attempts
+export interface FailedLoginAttempt {
+    id: string;
+    email: string;
+    ip_address?: string;
+    attempt_time: string;
+    user_agent?: string;
+}
+
+// Person Documents (Kişi Belgeleri) - Updated version
+export interface PersonDocumentNew {
+    id: string;
+    person_id: number;
+    document_name: string;
+    document_type: string;
+    file_path: string;
+    file_size?: number;
+    mime_type?: string;
+    uploaded_by?: string;
+    uploaded_at: string;
+}
+
+// Person Notes (Kişi Notları)
+export interface PersonNote {
+    id: string;
+    person_id: number;
+    note_content: string;
+    note_type: PersonNoteType;
+    is_important: boolean;
+    created_by?: string;
+    created_at: string;
+}
+
+// Aid Payments (Yardım Ödemeleri)
+export interface AidPayment {
+    id: string;
+    application_id: number;
+    payment_amount: number;
+    payment_method: PaymentMethod;
+    payment_date: string;
+    payment_reference?: string;
+    notes?: string;
+    paid_by?: string;
+    created_at: string;
+}
+
+// Memberships (Üyelikler)
+export interface Membership {
+    id: string;
+    person_id: number;
+    membership_type: MembershipType;
+    start_date: string;
+    end_date?: string;
+    status: MembershipStatus;
+    monthly_fee?: number;
+    notes?: string;
+    created_by?: string;
+    created_at: string;
+}
+
+// Membership Fees (Aidat Takibi)
+export interface MembershipFee {
+    id: string;
+    membership_id: string;
+    period: string; // Format: 'YYYY-MM'
+    amount: number;
+    due_date: string;
+    payment_date?: string;
+    status: MembershipFeeStatus;
+    payment_method?: PaymentMethod;
+    notes?: string;
+    created_at: string;
+}
+
+// Notifications (Bildirimler)
+export interface NotificationNew {
+    id: string;
+    user_id: string;
+    title: string;
+    message: string;
+    type: NotificationType;
+    is_read: boolean;
+    action_url?: string;
+    created_at: string;
+}
+
+// File Uploads (Dosya Yüklemeleri)
+export interface FileUpload {
+    id: string;
+    original_name: string;
+    stored_name: string;
+    file_path: string;
+    file_size: number;
+    mime_type: string;
+    entity_type?: FileUploadEntityType;
+    entity_id?: string;
+    uploaded_by?: string;
+    created_at: string;
+}
+
+// Donation Campaigns (Bağış Kampanyaları)
+export interface DonationCampaign {
+    id: string;
+    name: string;
+    description?: string;
+    target_amount?: number;
+    current_amount: number;
+    start_date: string;
+    end_date?: string;
+    status: CampaignStatus;
+    created_by?: string;
+    created_at: string;
 }

@@ -1,9 +1,7 @@
 # TODO:
 
-- [x] hydration-1: Identify components causing React error #418 hydration mismatches (priority: High)
-- [x] hydration-2: Fix server/client rendering inconsistencies (Date.now, Math.random, window checks) (priority: High)
-- [x] hydration-3: Fix React error #467 - Update hook called on initial render (priority: High)
-- [x] hydration-5: Ensure consistent rendering between server and client (priority: High)
-- [x] hydration-4: Add proper error boundaries for hydration failures (priority: Medium)
-- [x] hydration-6: Test fixes in development and production builds (priority: Medium)
-- [x] hydration-7: Deploy fixed version and verify error resolution (priority: Medium)
+- [x] fix-kisiler-table: Update all references from 'kisiler' to 'people' in apiService.ts and other files (priority: High)
+- [x] fix-projeler-table: Update all references from 'projeler' to 'projects' in apiService.ts and other files (priority: High)
+- [x] fix-yardim-basvurulari-table: Update all references from 'yardim_basvurulari' to 'aid_applications' in apiService.ts and other files (priority: High)
+- [x] fix-bagislar-table: Update all references from 'bagislar' to 'donations' in apiService.ts and other files (priority: High)
+- [x] verify-table-fixes: Test the application to ensure all table name errors are resolved (priority: Medium)

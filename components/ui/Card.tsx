@@ -7,6 +7,10 @@ export interface CardProps {
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   hover?: boolean;
   onClick?: () => void;
+  'aria-label'?: string;
+  'aria-describedby'?: string;
+  role?: string;
+  as?: 'div' | 'article' | 'section';
 }
 
 export interface CardHeaderProps {
@@ -33,6 +37,10 @@ export const Card: React.FC<CardProps> = ({
   padding = 'md',
   hover = false,
   onClick,
+  'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
+  role,
+  as: Component = 'div',
 }) => {
   const baseClasses = 'rounded-xl transition-all duration-200';
   
@@ -62,10 +70,25 @@ export const Card: React.FC<CardProps> = ({
     className,
   ].join(' ');
   
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <div className={classes} onClick={onClick}>
+    <Component 
+      className={classes} 
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={onClick ? 0 : undefined}
+      role={role || (onClick ? 'button' : undefined)}
+      aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
+    >
       {children}
-    </div>
+    </Component>
   );
 };
 
@@ -76,13 +99,13 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
   action,
 }) => {
   return (
-    <div className={`flex items-center justify-between mb-4 ${className}`}>
+    <header className={`flex items-center justify-between mb-4 ${className}`}>
       <div className="flex items-center space-x-3">
-        {avatar && <div className="flex-shrink-0">{avatar}</div>}
+        {avatar && <div className="flex-shrink-0" aria-hidden="true">{avatar}</div>}
         <div className="flex-1">{children}</div>
       </div>
-      {action && <div>{action}</div>}
-    </div>
+      {action && <div className="flex-shrink-0">{action}</div>}
+    </header>
   );
 };
 
@@ -118,6 +141,13 @@ export const StatCard: React.FC<StatCardProps> = ({
   icon,
   color = 'primary',
 }) => {
+  const ariaLabel = `${title}: ${value}${change ? `, ${changeType === 'increase' ? 'artış' : changeType === 'decrease' ? 'azalış' : 'değişim'} ${change}` : ''}`;
+  
+  const changeText = {
+    increase: 'artış',
+    decrease: 'azalış', 
+    neutral: 'değişim'
+  };
   const colorClasses = {
     primary: 'text-primary-600 bg-primary-100 dark:bg-primary-900/20',
     success: 'text-success-600 bg-success-100 dark:bg-success-900/20',
@@ -138,19 +168,26 @@ export const StatCard: React.FC<StatCardProps> = ({
   };
   
   return (
-    <Card variant="elevated" padding="lg" hover>
+    <Card 
+      variant="elevated" 
+      padding="lg" 
+      hover
+      as="article"
+      aria-label={ariaLabel}
+      role="img"
+    >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400" id={`stat-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>{title}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1" aria-describedby={`stat-title-${title.replace(/\s+/g, '-').toLowerCase()}`}>{value}</p>
           {change && (
-            <p className={`text-sm ${changeColorClasses[changeType]} mt-1`}>
-              {changeIcon[changeType]} {change}
+            <p className={`text-sm ${changeColorClasses[changeType]} mt-1`} aria-label={`${changeText[changeType]} ${change}`}>
+              <span aria-hidden="true">{changeIcon[changeType]}</span> {change}
             </p>
           )}
         </div>
         {icon && (
-          <div className={`p-3 rounded-full ${colorClasses[color]}`}>
+          <div className={`p-3 rounded-full ${colorClasses[color]}`} aria-hidden="true">
             {icon}
           </div>
         )}

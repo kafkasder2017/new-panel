@@ -31,7 +31,8 @@ import {
   BellIcon,
   ArrowRightOnRectangleIcon,
   XMarkIcon,
-  Bars3Icon
+  Bars3Icon,
+  ComputerDesktopIcon
 } from '@heroicons/react/24/outline';
 
 // Icons from @heroicons/react package (Outline, 24x24, stroke-width: 1.5)
@@ -65,10 +66,11 @@ export const ICONS = {
     CHEVRON_DOWN: <ChevronDownIcon className="w-5 h-5" />,
     SUN: <SunIcon className="w-5 h-5" />,
     MOON: <MoonIcon className="w-5 h-5" />,
+    COMPUTER: <ComputerDesktopIcon className="w-5 h-5" />,
     BELL: <BellIcon className="w-6 h-6" />,
     LOGOUT: <ArrowRightOnRectangleIcon className="w-6 h-6" />,
     X_MARK: <XMarkIcon className="w-6 h-6" />,
-    HAMBURGER: <Bars3Icon className="w-6 h-6" />,
+    HAMBURGER: <Bars3Icon className="w-6 h-6" />
 };
 
 const { YONETICI, EDITOR, MUHASEBE, GONULLU } = KullaniciRol;

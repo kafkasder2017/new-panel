@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
@@ -10,17 +10,26 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   variant?: 'default' | 'filled' | 'borderless';
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(({
-  label,
-  error,
-  helperText,
-  leftIcon,
-  rightIcon,
-  size = 'md',
-  variant = 'default',
-  className = '',
-  ...props
-}, ref) => {
+export const Input = forwardRef<HTMLInputElement, InputProps>((
+  {
+    label,
+    error,
+    helperText,
+    leftIcon,
+    rightIcon,
+    size = 'md',
+    variant = 'default',
+    className = '',
+    id,
+    required,
+    ...props
+  },
+  ref
+) => {
+  const inputId = useId();
+  const finalId = id || inputId;
+  const errorId = `${finalId}-error`;
+  const helperId = `${finalId}-helper`;
   const baseClasses = 'block w-full rounded-lg border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50';
   
   const sizeClasses = {
@@ -58,27 +67,39 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label 
+          htmlFor={finalId}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
           {label}
+          {required && <span className="text-danger-500 ml-1" aria-label="gerekli alan">*</span>}
         </label>
       )}
       
       <div className="relative">
         {leftIcon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className={`text-gray-400 ${iconSizeClasses[size]}`}>{leftIcon}</span>
+            <span className={`text-gray-400 ${iconSizeClasses[size]}`} aria-hidden="true">{leftIcon}</span>
           </div>
         )}
         
         <input
           ref={ref}
+          id={finalId}
           className={classes}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={
+            [error && errorId, helperText && helperId]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
+          required={required}
           {...props}
         />
         
         {rightIcon && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <span className={`text-gray-400 ${iconSizeClasses[size]}`}>{rightIcon}</span>
+            <span className={`text-gray-400 ${iconSizeClasses[size]}`} aria-hidden="true">{rightIcon}</span>
           </div>
         )}
       </div>
@@ -86,10 +107,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       {(error || helperText) && (
         <div className="mt-1">
           {error && (
-            <p className="text-sm text-danger-600 dark:text-danger-400">{error}</p>
+            <p 
+              id={errorId}
+              className="text-sm text-danger-600 dark:text-danger-400"
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </p>
           )}
           {helperText && !error && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
+            <p 
+              id={helperId}
+              className="text-sm text-gray-500 dark:text-gray-400"
+            >
+              {helperText}
+            </p>
           )}
         </div>
       )}

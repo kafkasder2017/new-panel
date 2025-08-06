@@ -14,6 +14,9 @@ import ErrorBoundary from './components/ErrorBoundary.tsx';
 import HydrationErrorBoundary from './components/HydrationErrorBoundary.tsx';
 import ConfigValidator from './components/ConfigValidator.tsx';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PWAStatus from './components/PWAStatus.tsx';
+import { ThemeProvider } from './components/ThemeContext.tsx';
+import ThemeToggle from './components/ThemeToggle.tsx';
 
 
 const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
@@ -36,7 +39,7 @@ const Bildirimler = lazy(() => import('./components/Bildirimler.tsx'));
 const Ayarlar = lazy(() => import('./components/Ayarlar.tsx'));
 const Profil = lazy(() => import('./components/Profil.tsx'));
 const BaskanOnayi = lazy(() => import('./components/BaskanOnayi.tsx'));
-const ProtectedRoute = lazy(() => import('./components/ProtectedRoute.tsx'));
+import ProtectedRoute from './components/ProtectedRoute.tsx';
 const AccessDenied = lazy(() => import('./components/AccessDenied.tsx'));
 const YardimAlanlar = lazy(() => import('./components/YardimAlanlar.tsx'));
 const AyniYardimIslemleri = lazy(() => import('./components/AyniYardimIslemleri.tsx'));
@@ -49,7 +52,7 @@ const VefaDestekDetay = lazy(() => import('./components/VefaDestekDetay.tsx'));
 const GonulluYonetimi = lazy(() => import('./components/GonulluYonetimi.tsx'));
 const GonulluDetay = lazy(() => import('./components/GonulluDetay.tsx'));
 const MesajRaporlari = lazy(() => import('./components/MesajRaporlari.tsx'));
-const Login = lazy(() => import('./components/Login.tsx'));
+import Login from './components/Login.tsx';
 const DenetimKayitlari = lazy(() => import('./components/DenetimKayitlari.tsx'));
 const DokumanArsivi = lazy(() => import('./components/DosyaYonetimi.tsx'));
 const YetimYonetimi = lazy(() => import('./components/YetimYonetimi.tsx'));
@@ -105,11 +108,15 @@ const Sidebar: React.FC<{ user: ProfilData; onSignOut: () => void; isOpen: boole
 
 
     return (
-        <aside className={`w-64 flex-shrink-0 bg-white dark:bg-zinc-900 flex flex-col fixed inset-y-0 left-0 z-50 border-r border-zinc-200 dark:border-zinc-800 transform transition-all duration-200 ease-in-out lg:translate-x-0 shadow-lg lg:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside 
+            className={`w-64 flex-shrink-0 bg-white dark:bg-zinc-900 flex flex-col fixed inset-y-0 left-0 z-50 border-r border-zinc-200 dark:border-zinc-800 transform transition-all duration-200 ease-in-out lg:translate-x-0 shadow-lg lg:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+            role="navigation"
+            aria-label="Ana navigasyon"
+        >
             <div className="h-16 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
                 <h1 className="text-xl font-bold text-zinc-800 dark:text-white tracking-wider">KAFKASDER</h1>
             </div>
-            <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto" role="menu">
                 {visibleNavItems.map((item) => (
                     item.subItems ? <CollapsibleNavItem key={item.path} item={item} /> : <NavItemLink key={item.path} item={item} />
                 ))}
@@ -125,6 +132,7 @@ const Sidebar: React.FC<{ user: ProfilData; onSignOut: () => void; isOpen: boole
                 <button
                     onClick={onSignOut}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors duration-200"
+                    aria-label="Oturumu kapat"
                 >
                     {ICONS.LOGOUT}
                     <span>Çıkış Yap</span>
@@ -137,11 +145,9 @@ const Sidebar: React.FC<{ user: ProfilData; onSignOut: () => void; isOpen: boole
 const Header: React.FC<{ 
     unreadCount: number; 
     title: string; 
-    theme: 'light' | 'dark'; 
-    toggleTheme: () => void; 
     onMenuClick: () => void; 
     onSmartSearch: (query: string) => void;
-}> = ({ unreadCount, title, theme, toggleTheme, onMenuClick, onSmartSearch }) => {
+}> = ({ unreadCount, title, onMenuClick, onSmartSearch }) => {
     
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -174,24 +180,32 @@ const Header: React.FC<{
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Akıllı Arama (örn: 'Ankara'daki aktif gönüllüler')"
                             className="block w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-full py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600"
+                            aria-label="Akıllı arama"
+                            role="searchbox"
                         />
                     </div>
                 </form>
             </div>
             <div className="flex items-center space-x-2">
-                 <button onClick={toggleTheme} className="p-2 rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
-                    {theme === 'light' ? ICONS.MOON : ICONS.SUN}
-                 </button>
-                 <ReactRouterDOM.NavLink to="/bildirimler" className="relative p-2 rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                 <ThemeToggle />
+                 <ReactRouterDOM.NavLink 
+                     to="/bildirimler" 
+                     className="relative p-2 rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                     aria-label={`Bildirimler ${unreadCount > 0 ? `(${unreadCount} okunmamış)` : ''}`}
+                 >
                      {ICONS.BELL}
                      {unreadCount > 0 && (
-                         <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                         <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5" aria-hidden="true">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
                          </span>
                      )}
                  </ReactRouterDOM.NavLink>
-                 <ReactRouterDOM.NavLink to="/ayarlar/genel" className="p-2 rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                 <ReactRouterDOM.NavLink 
+                     to="/ayarlar/genel" 
+                     className="p-2 rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                     aria-label="Ayarlar"
+                 >
                      {ICONS.SETTINGS}
                  </ReactRouterDOM.NavLink>
             </div>
@@ -292,43 +306,24 @@ const NavItemLink: React.FC<{ item: NavItem, isSubItem?: boolean }> = ({ item, i
 
 const MainLayout: React.FC<{ user: ProfilData; onSignOut: () => void; onSmartSearch: (query: string) => void; }> = ({ user, onSignOut, onSmartSearch }) => {
     const [profileState, setProfileState] = useState<ProfilData>(user);
-    const { data: notifications } = useSupabaseQuery<Bildirim>('bildirimler');
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const { data: notifications } = useSupabaseQuery<Bildirim>('notifications');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     
-    const unreadCount = React.useMemo(() => (notifications || []).filter(n => n.durum === BildirimDurumu.OKUNMADI).length, [notifications]);
+    const unreadCount = React.useMemo(() => (notifications || []).filter(n => !n.is_read).length, [notifications]);
     
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    };
+
     
      useEffect(() => {
         setProfileState(user);
     }, [user]);
     
-    // Initialize theme from localStorage after mount
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-        if (savedTheme) {
-            setTheme(savedTheme);
-        }
-    }, []);
-    
-     useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [theme]);
+
 
     const handleProfileSave = async (updatedProfile: ProfilData) => {
         const promise = new Promise<ProfilData>(async (resolve, reject) => {
             try {
                 const payload: Partial<Kullanici> = {
-                    kullaniciAdi: updatedProfile.adSoyad,
+                    kullanici_adi: updatedProfile.adSoyad,
                     email: updatedProfile.email,
                 };
     
@@ -337,7 +332,7 @@ const MainLayout: React.FC<{ user: ProfilData; onSignOut: () => void; onSmartSea
                 const updatedProfilData: ProfilData = {
                     ...updatedProfile,
                     id: savedUser.id,
-                    adSoyad: savedUser.kullaniciAdi,
+                    adSoyad: savedUser.kullanici_adi,
                     email: savedUser.email,
                     rol: savedUser.rol,
                 };
@@ -390,7 +385,7 @@ const MainLayout: React.FC<{ user: ProfilData; onSignOut: () => void; onSmartSea
             <Sidebar user={profileState} onSignOut={onSignOut} isOpen={isSidebarOpen} />
             <main className="flex-1 flex flex-col lg:pl-64 transition-all duration-200">
                 <PageTitle>
-                    {title => <Header onSmartSearch={onSmartSearch} unreadCount={unreadCount} title={title} theme={theme} toggleTheme={toggleTheme} onMenuClick={() => setIsSidebarOpen(true)} />}
+                    {title => <Header onSmartSearch={onSmartSearch} unreadCount={unreadCount} title={title} onMenuClick={() => setIsSidebarOpen(true)} />}
                 </PageTitle>
                 <div className="flex-1 p-6 pt-20 lg:p-8 lg:pt-24 overflow-y-auto bg-zinc-50 dark:bg-zinc-900">
                     <Suspense fallback={<LoadingFallback />}>
@@ -581,20 +576,23 @@ const App: React.FC = () => {
     }
 
     return (
-        <ConfigValidator>
-            <ErrorBoundary>
-                <HydrationErrorBoundary>
-                    <ReactRouterDOM.HashRouter>
-                        <Toaster position="top-center" reverseOrder={false} />
-                        <PWAInstallPrompt />
-                        {smartSearchQuery && <SmartChatModal query={smartSearchQuery} onClose={() => setSmartSearchQuery(null)} />}
-                        <ReactRouterDOM.Routes>
-                            <ReactRouterDOM.Route path="/*" element={<MainLayout user={currentUser} onSignOut={handleSignOut} onSmartSearch={setSmartSearchQuery} />} />
-                        </ReactRouterDOM.Routes>
-                    </ReactRouterDOM.HashRouter>
-                </HydrationErrorBoundary>
-            </ErrorBoundary>
-        </ConfigValidator>
+        <ThemeProvider>
+            <ConfigValidator>
+                <ErrorBoundary>
+                    <HydrationErrorBoundary>
+                        <ReactRouterDOM.HashRouter>
+                            <Toaster position="top-center" reverseOrder={false} />
+                            <PWAInstallPrompt />
+                            <PWAStatus />
+                            {smartSearchQuery && <SmartChatModal query={smartSearchQuery} onClose={() => setSmartSearchQuery(null)} />}
+                            <ReactRouterDOM.Routes>
+                                <ReactRouterDOM.Route path="/*" element={<MainLayout user={currentUser} onSignOut={handleSignOut} onSmartSearch={setSmartSearchQuery} />} />
+                            </ReactRouterDOM.Routes>
+                        </ReactRouterDOM.HashRouter>
+                    </HydrationErrorBoundary>
+                </ErrorBoundary>
+            </ConfigValidator>
+        </ThemeProvider>
     );
 };
 

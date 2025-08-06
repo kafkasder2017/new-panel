@@ -8,7 +8,9 @@ import {
     Bildirim, AidatDurumu, KullaniciDurum, DenetimKaydi, Yorum, Kurum,
     Profil as ProfilData,
     Kullanici as KullaniciData,
-    BildirimDurumu
+    BildirimDurumu,
+    UserSession, FailedLoginAttempt, PersonDocumentNew, PersonNote, AidPayment,
+    Membership, MembershipFee, NotificationNew, FileUpload, DonationCampaign
 } from '../types';
 import { supabase, userToProfile } from './supabaseClient';
 
@@ -39,14 +41,14 @@ const createRecord = async <T extends { id: number | string }>(tableName: string
     return data[0] as T;
 };
 
-const updateRecord = async <T extends { id: number | string }>(tableName: string, id: number, updates: Partial<T>): Promise<T> => {
+const updateRecord = async <T extends { id: number | string }>(tableName: string, id: number | string, updates: Partial<T>): Promise<T> => {
     const { data, error } = await supabase.from(tableName).update(updates).eq('id', id).select();
     if (error) handleSupabaseError(error, `update id ${id} in ${tableName}`);
      if (!data || data.length === 0) throw new Error("Kayıt güncellendikten sonra veri alınamadı.");
     return data[0] as T;
 };
 
-const deleteRecord = async (tableName: string, id: number): Promise<void> => {
+const deleteRecord = async (tableName: string, id: number | string): Promise<void> => {
     const { error } = await supabase.from(tableName).delete().eq('id', id);
     if (error) handleSupabaseError(error, `delete id ${id} in ${tableName}`);
 };
@@ -108,13 +110,13 @@ export const createDenetimKaydi = (kayit: Omit<DenetimKaydi, 'id'>): Promise<Den
 export const createYorum = (yorum: Omit<Yorum, 'id'>): Promise<Yorum> => createRecord<Yorum>('yorumlar', yorum);
 
 // Kişiler
-export const getPeople = (): Promise<Person[]> => getAll<Person>('kisiler');
-export const getPersonById = (id: number): Promise<Person> => getById<Person>('kisiler', id);
-export const createPerson = (person: Omit<Person, 'id'>): Promise<Person> => createRecord<Person>('kisiler', person);
-export const updatePerson = (id: number, person: Partial<Person>): Promise<Person> => updateRecord<Person>('kisiler', id, person);
-export const deletePerson = (id: number): Promise<void> => deleteRecord('kisiler', id);
+export const getPeople = (): Promise<Person[]> => getAll<Person>('people');
+export const getPersonById = (id: number): Promise<Person> => getById<Person>('people', id);
+export const createPerson = (person: Omit<Person, 'id'>): Promise<Person> => createRecord<Person>('people', person);
+export const updatePerson = (id: number, person: Partial<Person>): Promise<Person> => updateRecord<Person>('people', id, person);
+export const deletePerson = (id: number): Promise<void> => deleteRecord('people', id);
 export const deletePeople = async (ids: number[]): Promise<void> => {
-    const { error } = await supabase.from('kisiler').delete().in('id', ids);
+    const { error } = await supabase.from('people').delete().in('id', ids);
     if (error) handleSupabaseError(error, 'delete multiple people');
 };
 
@@ -135,7 +137,7 @@ export const createUser = async (user: Partial<Kullanici> & { password?: string 
     if (!data.user) throw new Error("User creation failed in Auth.");
     
     const profileToCreate = {
-        kullaniciAdi: user.kullaniciAdi, 
+        kullanici_adi: user.kullanici_adi, 
         email: user.email, 
         rol: user.rol,
         durum: user.durum || KullaniciDurum.AKTIF,
@@ -146,24 +148,24 @@ export const updateUser = (id: number, user: Partial<Kullanici>): Promise<Kullan
 export const deleteUser = (id: number): Promise<void> => deleteRecord('kullanicilar', id); // Note: this doesn't delete the auth user.
 
 // Projeler
-export const getProjeler = (): Promise<Proje[]> => getAll<Proje>('projeler');
-export const getProjeById = (id: number): Promise<Proje> => getById<Proje>('projeler', id);
-export const createProje = (proje: Omit<Proje, 'id'>): Promise<Proje> => createRecord<Proje>('projeler', proje);
-export const updateProje = (id: number, proje: Partial<Proje>): Promise<Proje> => updateRecord<Proje>('projeler', id, proje);
-export const deleteProje = (id: number): Promise<void> => deleteRecord('projeler', id);
+export const getProjeler = (): Promise<Proje[]> => getAll<Proje>('projects');
+export const getProjeById = (id: number): Promise<Proje> => getById<Proje>('projects', id);
+export const createProje = (proje: Omit<Proje, 'id'>): Promise<Proje> => createRecord<Proje>('projects', proje);
+export const updateProje = (id: number, proje: Partial<Proje>): Promise<Proje> => updateRecord<Proje>('projects', id, proje);
+export const deleteProje = (id: number): Promise<void> => deleteRecord('projects', id);
 
 // Bağışlar
-export const getBagislar = (): Promise<Bagis[]> => getAll<Bagis>('bagislar');
-export const createBagis = (bagis: Omit<Bagis, 'id'>): Promise<Bagis> => createRecord<Bagis>('bagislar', bagis);
-export const updateBagis = (id: number, bagis: Partial<Bagis>): Promise<Bagis> => updateRecord<Bagis>('bagislar', id, bagis);
-export const deleteBagis = (id: number): Promise<void> => deleteRecord('bagislar', id);
+export const getBagislar = (): Promise<Bagis[]> => getAll<Bagis>('donations');
+export const createBagis = (bagis: Omit<Bagis, 'id'>): Promise<Bagis> => createRecord<Bagis>('donations', bagis);
+export const updateBagis = (id: number, bagis: Partial<Bagis>): Promise<Bagis> => updateRecord<Bagis>('donations', id, bagis);
+export const deleteBagis = (id: number): Promise<void> => deleteRecord('donations', id);
 
 // Yardım Başvuruları
-export const getYardimBasvurulari = (): Promise<YardimBasvurusu[]> => getAll<YardimBasvurusu>('yardim_basvurulari');
-export const getYardimBasvurusuById = (id: number): Promise<YardimBasvurusu> => getById<YardimBasvurusu>('yardim_basvurulari', id);
-export const createYardimBasvurusu = (basvuru: Omit<YardimBasvurusu, 'id'>): Promise<YardimBasvurusu> => createRecord<YardimBasvurusu>('yardim_basvurulari', basvuru);
-export const updateYardimBasvurusu = (id: number, basvuru: Partial<YardimBasvurusu>): Promise<YardimBasvurusu> => updateRecord<YardimBasvurusu>('yardim_basvurulari', id, basvuru);
-export const deleteYardimBasvurusu = (id: number): Promise<void> => deleteRecord('yardim_basvurulari', id);
+export const getYardimBasvurulari = (): Promise<YardimBasvurusu[]> => getAll<YardimBasvurusu>('aid_applications');
+export const getYardimBasvurusuById = (id: number): Promise<YardimBasvurusu> => getById<YardimBasvurusu>('aid_applications', id);
+export const createYardimBasvurusu = (basvuru: Omit<YardimBasvurusu, 'id'>): Promise<YardimBasvurusu> => createRecord<YardimBasvurusu>('aid_applications', basvuru);
+export const updateYardimBasvurusu = (id: number, basvuru: Partial<YardimBasvurusu>): Promise<YardimBasvurusu> => updateRecord<YardimBasvurusu>('aid_applications', id, basvuru);
+export const deleteYardimBasvurusu = (id: number): Promise<void> => deleteRecord('aid_applications', id);
 
 // Davalar
 export const getDavalar = (): Promise<Dava[]> => getAll<Dava>('davalar');
@@ -290,20 +292,20 @@ export const getAidatlarByUyeId = async (uyeId: number): Promise<Aidat[]> => {
 export const createAidat = (aidat: Omit<Aidat, 'id'>): Promise<Aidat> => createRecord<Aidat>('aidatlar', aidat);
 export const updateAidat = (id: number, aidat: Partial<Aidat>): Promise<Aidat> => updateRecord<Aidat>('aidatlar', id, aidat);
 
-// Bildirimler
-export const getBildirimler = (): Promise<Bildirim[]> => getAll<Bildirim>('bildirimler');
-export const createBildirim = (bildirim: Omit<Bildirim, 'id'>): Promise<Bildirim> => createRecord<Bildirim>('bildirimler', bildirim);
-export const updateBildirim = (id: number, bildirim: Partial<Bildirim>): Promise<Bildirim> => updateRecord<Bildirim>('bildirimler', id, bildirim);
-export const deleteBildirim = (id: number): Promise<void> => deleteRecord('bildirimler', id);
+// Notifications (Bildirimler)
+export const getBildirimler = (): Promise<Bildirim[]> => getAll<Bildirim>('notifications');
+export const createBildirim = (bildirim: Omit<Bildirim, 'id'>): Promise<Bildirim> => createRecord<Bildirim>('notifications', bildirim);
+export const updateBildirim = (id: string, bildirim: Partial<Bildirim>): Promise<Bildirim> => updateRecord<Bildirim>('notifications', id, bildirim);
+export const deleteBildirim = (id: string): Promise<void> => deleteRecord('notifications', id);
 export const markAllAsRead = async () => {
-    const { data: unread, error: selectError } = await supabase.from('bildirimler').select('id').eq('durum', 'Okunmadı');
+    const { data: unread, error: selectError } = await supabase.from('notifications').select('id').eq('is_read', false);
     if(selectError || !unread) {
         if (selectError) handleSupabaseError(selectError, 'markAllAsRead select');
         return;
     };
-    const idsToUpdate = unread.map((u: { id: number }) => u.id);
+    const idsToUpdate = unread.map((u: { id: string }) => u.id);
     if(idsToUpdate.length === 0) return;
-    const { error } = await (supabase.from('bildirimler') as any).update({ durum: BildirimDurumu.OKUNDU }).in('id', idsToUpdate);
+    const { error } = await (supabase.from('notifications') as any).update({ is_read: true }).in('id', idsToUpdate);
     if(error) handleSupabaseError(error, 'markAllAsRead update');
 };
 
@@ -397,3 +399,246 @@ export const getKurumById = (id: number): Promise<Kurum> => getById<Kurum>('kuru
 export const createKurum = (kurum: Omit<Kurum, 'id'>): Promise<Kurum> => createRecord<Kurum>('kurumlar', kurum);
 export const updateKurum = (id: number, kurum: Partial<Kurum>): Promise<Kurum> => updateRecord<Kurum>('kurumlar', id, kurum);
 export const deleteKurum = (id: number): Promise<void> => deleteRecord('kurumlar', id);
+
+// === YENİ TABLOLAR İÇİN API FONKSİYONLARI ===
+
+// User Sessions (Kullanıcı Oturumları)
+export const getUserSessions = (): Promise<UserSession[]> => getAll<UserSession>('user_sessions');
+export const getUserSessionById = async (id: string): Promise<UserSession> => {
+    const { data, error } = await supabase.from('user_sessions').select('*').eq('id', id).single();
+    if (error) handleSupabaseError(error, `get user session ${id}`);
+    return data as UserSession;
+};
+export const createUserSession = (session: Omit<UserSession, 'id' | 'created_at'>): Promise<UserSession> => {
+    const sessionData = { ...session, created_at: new Date().toISOString() };
+    return createRecord<UserSession>('user_sessions', sessionData);
+};
+export const updateUserSession = async (id: string, session: Partial<UserSession>): Promise<UserSession> => {
+    const { data, error } = await supabase.from('user_sessions').update(session).eq('id', id).select();
+    if (error) handleSupabaseError(error, `update user session ${id}`);
+    if (!data || data.length === 0) throw new Error("Oturum güncellendikten sonra veri alınamadı.");
+    return data[0] as UserSession;
+};
+export const deleteUserSession = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('user_sessions').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete user session ${id}`);
+};
+
+// Failed Login Attempts (Başarısız Giriş Denemeleri)
+export const getFailedLoginAttempts = (): Promise<FailedLoginAttempt[]> => getAll<FailedLoginAttempt>('failed_login_attempts');
+export const createFailedLoginAttempt = (attempt: Omit<FailedLoginAttempt, 'id' | 'attempt_time'>): Promise<FailedLoginAttempt> => {
+    const attemptData = { ...attempt, attempt_time: new Date().toISOString() };
+    return createRecord<FailedLoginAttempt>('failed_login_attempts', attemptData);
+};
+export const getFailedLoginAttemptsByEmail = async (email: string, hours: number = 24): Promise<FailedLoginAttempt[]> => {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+        .from('failed_login_attempts')
+        .select('*')
+        .eq('email', email)
+        .gte('attempt_time', since)
+        .order('attempt_time', { ascending: false });
+    if (error) handleSupabaseError(error, `get failed login attempts for ${email}`);
+    return data as FailedLoginAttempt[];
+};
+
+// Person Documents (Kişi Belgeleri)
+export const getPersonDocuments = (): Promise<PersonDocumentNew[]> => getAll<PersonDocumentNew>('person_documents');
+export const getPersonDocumentsByPersonId = async (personId: number): Promise<PersonDocumentNew[]> => {
+    const { data, error } = await supabase
+        .from('person_documents')
+        .select('*')
+        .eq('person_id', personId)
+        .order('uploaded_at', { ascending: false });
+    if (error) handleSupabaseError(error, `get documents for person ${personId}`);
+    return data as PersonDocumentNew[];
+};
+export const createPersonDocument = (document: Omit<PersonDocumentNew, 'id' | 'uploaded_at'>): Promise<PersonDocumentNew> => {
+    const documentData = { ...document, uploaded_at: new Date().toISOString() };
+    return createRecord<PersonDocumentNew>('person_documents', documentData);
+};
+export const deletePersonDocument = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('person_documents').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete person document ${id}`);
+};
+
+// Person Notes (Kişi Notları)
+export const getPersonNotes = (): Promise<PersonNote[]> => getAll<PersonNote>('person_notes');
+export const getPersonNotesByPersonId = async (personId: number): Promise<PersonNote[]> => {
+    const { data, error } = await supabase
+        .from('person_notes')
+        .select('*')
+        .eq('person_id', personId)
+        .order('created_at', { ascending: false });
+    if (error) handleSupabaseError(error, `get notes for person ${personId}`);
+    return data as PersonNote[];
+};
+export const createPersonNote = (note: Omit<PersonNote, 'id' | 'created_at'>): Promise<PersonNote> => {
+    const noteData = { ...note, created_at: new Date().toISOString() };
+    return createRecord<PersonNote>('person_notes', noteData);
+};
+export const updatePersonNote = async (id: string, note: Partial<PersonNote>): Promise<PersonNote> => {
+    const { data, error } = await supabase.from('person_notes').update(note).eq('id', id).select();
+    if (error) handleSupabaseError(error, `update person note ${id}`);
+    if (!data || data.length === 0) throw new Error("Not güncellendikten sonra veri alınamadı.");
+    return data[0] as PersonNote;
+};
+export const deletePersonNote = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('person_notes').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete person note ${id}`);
+};
+
+// Aid Payments (Yardım Ödemeleri)
+export const getAidPayments = (): Promise<AidPayment[]> => getAll<AidPayment>('aid_payments');
+export const getAidPaymentsByApplicationId = async (applicationId: number): Promise<AidPayment[]> => {
+    const { data, error } = await supabase
+        .from('aid_payments')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('payment_date', { ascending: false });
+    if (error) handleSupabaseError(error, `get payments for application ${applicationId}`);
+    return data as AidPayment[];
+};
+export const createAidPayment = (payment: Omit<AidPayment, 'id' | 'created_at'>): Promise<AidPayment> => {
+    const paymentData = { ...payment, created_at: new Date().toISOString() };
+    return createRecord<AidPayment>('aid_payments', paymentData);
+};
+export const updateAidPayment = async (id: string, payment: Partial<AidPayment>): Promise<AidPayment> => {
+    const { data, error } = await supabase.from('aid_payments').update(payment).eq('id', id).select();
+    if (error) handleSupabaseError(error, `update aid payment ${id}`);
+    if (!data || data.length === 0) throw new Error("Ödeme güncellendikten sonra veri alınamadı.");
+    return data[0] as AidPayment;
+};
+export const deleteAidPayment = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('aid_payments').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete aid payment ${id}`);
+};
+
+// Memberships (Üyelikler)
+export const getMemberships = (): Promise<Membership[]> => getAll<Membership>('memberships');
+export const getMembershipsByPersonId = async (personId: number): Promise<Membership[]> => {
+    const { data, error } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('person_id', personId)
+        .order('start_date', { ascending: false });
+    if (error) handleSupabaseError(error, `get memberships for person ${personId}`);
+    return data as Membership[];
+};
+export const createMembership = (membership: Omit<Membership, 'id' | 'created_at'>): Promise<Membership> => {
+    const membershipData = { ...membership, created_at: new Date().toISOString() };
+    return createRecord<Membership>('memberships', membershipData);
+};
+export const updateMembership = async (id: string, membership: Partial<Membership>): Promise<Membership> => {
+    const { data, error } = await supabase.from('memberships').update(membership).eq('id', id).select();
+    if (error) handleSupabaseError(error, `update membership ${id}`);
+    if (!data || data.length === 0) throw new Error("Üyelik güncellendikten sonra veri alınamadı.");
+    return data[0] as Membership;
+};
+export const deleteMembership = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('memberships').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete membership ${id}`);
+};
+
+// Membership Fees (Aidat Takibi)
+export const getMembershipFees = (): Promise<MembershipFee[]> => getAll<MembershipFee>('membership_fees');
+export const getMembershipFeesByMembershipId = async (membershipId: string): Promise<MembershipFee[]> => {
+    const { data, error } = await supabase
+        .from('membership_fees')
+        .select('*')
+        .eq('membership_id', membershipId)
+        .order('due_date', { ascending: false });
+    if (error) handleSupabaseError(error, `get fees for membership ${membershipId}`);
+    return data as MembershipFee[];
+};
+export const createMembershipFee = (fee: Omit<MembershipFee, 'id' | 'created_at'>): Promise<MembershipFee> => {
+    const feeData = { ...fee, created_at: new Date().toISOString() };
+    return createRecord<MembershipFee>('membership_fees', feeData);
+};
+export const updateMembershipFee = async (id: string, fee: Partial<MembershipFee>): Promise<MembershipFee> => {
+    const { data, error } = await supabase.from('membership_fees').update(fee).eq('id', id).select();
+    if (error) handleSupabaseError(error, `update membership fee ${id}`);
+    if (!data || data.length === 0) throw new Error("Aidat güncellendikten sonra veri alınamadı.");
+    return data[0] as MembershipFee;
+};
+export const deleteMembershipFee = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('membership_fees').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete membership fee ${id}`);
+};
+
+// Notifications (Bildirimler - Yeni Sistem)
+export const getNotificationsNew = (): Promise<NotificationNew[]> => getAll<NotificationNew>('notifications');
+export const getNotificationsByUserId = async (userId: string): Promise<NotificationNew[]> => {
+    const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+    if (error) handleSupabaseError(error, `get notifications for user ${userId}`);
+    return data as NotificationNew[];
+};
+export const createNotificationNew = (notification: Omit<NotificationNew, 'id' | 'created_at'>): Promise<NotificationNew> => {
+    const notificationData = { ...notification, created_at: new Date().toISOString() };
+    return createRecord<NotificationNew>('notifications', notificationData);
+};
+export const markNotificationAsRead = async (id: string): Promise<NotificationNew> => {
+    const { data, error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id).select();
+    if (error) handleSupabaseError(error, `mark notification as read ${id}`);
+    if (!data || data.length === 0) throw new Error("Bildirim güncellenemedi.");
+    return data[0] as NotificationNew;
+};
+export const markAllNotificationsAsRead = async (userId: string): Promise<void> => {
+    const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+    if (error) handleSupabaseError(error, `mark all notifications as read for user ${userId}`);
+};
+export const deleteNotificationNew = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('notifications').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete notification ${id}`);
+};
+
+// File Uploads (Dosya Yüklemeleri)
+export const getFileUploads = (): Promise<FileUpload[]> => getAll<FileUpload>('file_uploads');
+export const getFileUploadsByEntity = async (entityType: string, entityId: string): Promise<FileUpload[]> => {
+    const { data, error } = await supabase
+        .from('file_uploads')
+        .select('*')
+        .eq('entity_type', entityType)
+        .eq('entity_id', entityId)
+        .order('created_at', { ascending: false });
+    if (error) handleSupabaseError(error, `get file uploads for ${entityType} ${entityId}`);
+    return data as FileUpload[];
+};
+export const createFileUpload = (fileUpload: Omit<FileUpload, 'id' | 'created_at'>): Promise<FileUpload> => {
+    const fileData = { ...fileUpload, created_at: new Date().toISOString() };
+    return createRecord<FileUpload>('file_uploads', fileData);
+};
+export const deleteFileUpload = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('file_uploads').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete file upload ${id}`);
+};
+
+// Donation Campaigns (Bağış Kampanyaları)
+export const getDonationCampaigns = (): Promise<DonationCampaign[]> => getAll<DonationCampaign>('donation_campaigns');
+export const getDonationCampaignById = async (id: string): Promise<DonationCampaign> => {
+    const { data, error } = await supabase.from('donation_campaigns').select('*').eq('id', id).single();
+    if (error) handleSupabaseError(error, `get donation campaign ${id}`);
+    return data as DonationCampaign;
+};
+export const createDonationCampaign = (campaign: Omit<DonationCampaign, 'id' | 'created_at'>): Promise<DonationCampaign> => {
+    const campaignData = { ...campaign, created_at: new Date().toISOString() };
+    return createRecord<DonationCampaign>('donation_campaigns', campaignData);
+};
+export const updateDonationCampaign = async (id: string, campaign: Partial<DonationCampaign>): Promise<DonationCampaign> => {
+    const { data, error } = await supabase.from('donation_campaigns').update(campaign).eq('id', id).select();
+    if (error) handleSupabaseError(error, `update donation campaign ${id}`);
+    if (!data || data.length === 0) throw new Error("Kampanya güncellendikten sonra veri alınamadı.");
+    return data[0] as DonationCampaign;
+};
+export const deleteDonationCampaign = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('donation_campaigns').delete().eq('id', id);
+    if (error) handleSupabaseError(error, `delete donation campaign ${id}`);
+};
