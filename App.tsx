@@ -67,6 +67,7 @@ const KurumYonetimi = lazy(() => import('./components/KurumYonetimi.tsx'));
 const RaporlamaAnalitik = lazy(() => import('./components/Raporlar.tsx'));
 const HaritaModulu = lazy(() => import('./components/HaritaModulu.tsx'));
 const Takvim = lazy(() => import('./components/Takvim.tsx'));
+const GuvenlikAyarlari = lazy(() => import('./src/pages/GuvenlikAyarlari.tsx'));
 import { useSupabaseQuery } from './hooks/useData.ts';
 import Modal from './components/Modal.tsx';
 import SmartChatModal from './components/SmartChatModal.tsx';
@@ -114,7 +115,16 @@ const Sidebar: React.FC<{ user: ProfilData; onSignOut: () => void; isOpen: boole
             aria-label="Ana navigasyon"
         >
             <div className="h-16 flex items-center justify-center border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-                <h1 className="text-xl font-bold text-zinc-800 dark:text-white tracking-wider">KAFKASDER</h1>
+                <img 
+                    src="/kafkasder-logo.png" 
+                    alt="KAFKASDER Logo" 
+                    className="h-12 w-auto max-w-[200px] object-contain"
+                    onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
+                    }}
+                />
+                <h1 className="text-xl font-bold text-zinc-800 dark:text-white tracking-wider hidden">KAFKASDER</h1>
             </div>
             <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto" role="menu">
                 {visibleNavItems.map((item) => (
@@ -446,6 +456,7 @@ const MainLayout: React.FC<{ user: ProfilData; onSignOut: () => void; onSmartSea
                             <ReactRouterDOM.Route path="/denetim-kayitlari" element={getRouteElement('/denetim-kayitlari', <DenetimKayitlari />)} />
                             <ReactRouterDOM.Route path="/ayarlar/genel" element={getRouteElement('/ayarlar/genel', <Ayarlar />)} />
                             <ReactRouterDOM.Route path="/ayarlar/api-entegrasyonlari" element={getRouteElement('/ayarlar/api-entegrasyonlari', <ApiEntegrasyonu />)} />
+                            <ReactRouterDOM.Route path="/ayarlar/guvenlik" element={getRouteElement('/ayarlar/guvenlik', <GuvenlikAyarlari />)} />
                             
                             {/* App-level Routes */}
                             <ReactRouterDOM.Route path="/bildirimler" element={<Bildirimler />} />

@@ -78,19 +78,19 @@ const BankaHesaplariModal: React.FC<{ person: Person, onClose: () => void, onSav
             <div className="space-y-4">
                 <div className="space-y-2 max-h-60 overflow-y-auto p-1">
                     {hesaplar.length > 0 ? hesaplar.map(hesap => (
-                        <div key={hesap.id} className="flex items-center justify-between p-2 bg-zinc-100 dark:bg-zinc-700 rounded-md">
-                            <div>
+                        <div key={hesap.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-zinc-100 dark:bg-zinc-700 rounded-md gap-2">
+                            <div className="flex-1">
                                 <p className="font-semibold text-zinc-800 dark:text-zinc-200">{hesap.hesapAdi}</p>
-                                <p className="text-sm text-zinc-600 dark:text-zinc-400 font-mono">{hesap.iban}</p>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400 font-mono break-all">{hesap.iban}</p>
                             </div>
-                            <button onClick={() => handleDelete(hesap.id)} className="text-red-500 p-1 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full text-xl leading-none">&times;</button>
+                            <button onClick={() => handleDelete(hesap.id)} className="self-end sm:self-center text-red-500 p-1 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full text-xl leading-none">&times;</button>
                         </div>
                     )) : <p className="text-center text-zinc-500 py-4">Banka hesabı eklenmemiş.</p>}
                 </div>
-                <div className="flex gap-2 border-t pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 border-t pt-4">
                     <input type="text" placeholder="Hesap Adı" value={newHesap.hesapAdi} onChange={e => setNewHesap(p => ({...p, hesapAdi: e.target.value}))} className="flex-1 p-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700" />
                     <input type="text" placeholder="IBAN" value={newHesap.iban} onChange={e => setNewHesap(p => ({...p, iban: e.target.value}))} className="flex-1 p-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700" />
-                    <button onClick={handleAdd} className="bg-blue-600 text-white px-4 rounded-md font-semibold hover:bg-blue-700">Ekle</button>
+                    <button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700">Ekle</button>
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
                     <button onClick={onClose} className="bg-white dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200 px-4 py-2 rounded-lg font-semibold border border-zinc-300 dark:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-500">İptal</button>
@@ -186,7 +186,7 @@ const BagliKisilerModal: React.FC<{ person: Person, allPeople: Person[], onClose
                         </div>
                     )) : <p className="text-center text-zinc-500 py-4">Bağlı kişi eklenmemiş.</p>}
                 </div>
-                <div className="flex gap-2 border-t pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 border-t pt-4">
                     <div className="flex-1">
                          <SearchableSelect<Person> options={availablePeople} value={newDependent.personId} onChange={val => setNewDependent(p => ({...p, personId: val}))} getOptionValue={p => p.id} getOptionLabel={p => `${p.ad} ${p.soyad} (${p.kimlikNo})`} placeholder="Kişi seçin..." />
                     </div>
@@ -194,7 +194,7 @@ const BagliKisilerModal: React.FC<{ person: Person, allPeople: Person[], onClose
                         <option value="">Yakınlık...</option>
                         {Object.values(YakinlikTuru).map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    <button onClick={handleAdd} className="bg-blue-600 text-white px-4 rounded-md font-semibold hover:bg-blue-700">Ekle</button>
+                    <button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700">Ekle</button>
                 </div>
                  <div className="flex justify-end gap-2 pt-4">
                     <button onClick={onClose} className="bg-white dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200 px-4 py-2 rounded-lg font-semibold border border-zinc-300 dark:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-500">İptal</button>
@@ -322,7 +322,7 @@ const KisiDetay: React.FC = () => {
     
     const renderContent = () => {
         const View = (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
                 <DetailItem label="Ad Soyad" value={`${formData.ad} ${formData.soyad}`} />
                 <DetailItem label="Durum" children={<span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusClass(formData.durum)}`}>{formData.durum}</span>} />
                 <DetailItem label="Cep Telefonu" value={formData.cepTelefonu} />
@@ -332,11 +332,11 @@ const KisiDetay: React.FC = () => {
                 <DetailItem label="TC Kimlik No" value={formData.kimlikNo} />
                 <DetailItem label="Cinsiyet" value={formData.cinsiyet} />
                 <DetailItem label="Medeni Durum" value={formData.medeniDurum} />
-                <DetailItem label="Adres" value={`${formData.adres}, ${formData.mahalle}, ${formData.yerlesim}/${formData.sehir}`} className="md:col-span-2 lg:col-span-3"/>
+                <DetailItem label="Adres" value={`${formData.adres}, ${formData.mahalle}, ${formData.yerlesim}/${formData.sehir}`} className="sm:col-span-2 lg:col-span-3"/>
             </div>
         );
         const Edit = (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormInput label="Ad" name="ad" value={formData.ad} onChange={handleInputChange} required />
                 <FormInput label="Soyad" name="soyad" value={formData.soyad} onChange={handleInputChange} required />
                 <FormSelect label="Durum" name="durum" value={formData.durum} onChange={handleInputChange} options={Object.values(PersonStatus).map(s=>({value:s, label:s}))} required />
@@ -349,7 +349,9 @@ const KisiDetay: React.FC = () => {
                 <FormInput label="Şehir" name="sehir" value={formData.sehir} onChange={handleInputChange} />
                 <FormInput label="İlçe/Yerleşim" name="yerlesim" value={formData.yerlesim} onChange={handleInputChange} />
                 <FormInput label="Mahalle" name="mahalle" value={formData.mahalle} onChange={handleInputChange} />
-                <FormTextarea label="Açık Adres" name="adres" value={formData.adres} onChange={handleInputChange} rows={2} />
+                <div className="sm:col-span-2 lg:col-span-3">
+                    <FormTextarea label="Açık Adres" name="adres" value={formData.adres} onChange={handleInputChange} rows={2} />
+                </div>
             </div>
         );
         return isEditMode ? Edit : View;
@@ -357,31 +359,35 @@ const KisiDetay: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 flex items-center justify-between flex-wrap gap-4">
-                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{person.ad} {person.soyad} (ID: #{person.id})</h2>
-                <div className="flex items-center gap-2">
-                    <button onClick={handleGenerateSummary} disabled={summaryState.isLoading} className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-700 flex items-center gap-2 disabled:bg-purple-300">
-                        <span className="w-5 h-5">{ICONS.LIGHTBULB}</span>
-                        <span>AI Özet Oluştur</span>
-                    </button>
-                    {isEditMode ? (
-                        <div className="flex gap-2">
-                            <button onClick={handleCancelEdit} className="px-4 py-2 text-sm font-semibold text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50">İptal</button>
-                            <button onClick={handleSaveChanges} disabled={isSaving} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-400">
-                                {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
-                            </button>
-                        </div>
-                    ) : (
-                        <button onClick={() => setIsEditMode(true)} className="px-4 py-2 text-sm font-semibold text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50">
-                            Bilgileri Düzenle
+            <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{person.ad} {person.soyad} (ID: #{person.id})</h2>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <button onClick={handleGenerateSummary} disabled={summaryState.isLoading} className="px-3 py-2 text-sm font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-700 flex items-center justify-center gap-2 disabled:bg-purple-300">
+                            <span className="w-4 h-4">{ICONS.LIGHTBULB}</span>
+                            <span className="hidden sm:inline">AI Özet Oluştur</span>
+                            <span className="sm:hidden">AI Özet</span>
                         </button>
-                    )}
+                        {isEditMode ? (
+                            <div className="flex gap-2">
+                                <button onClick={handleCancelEdit} className="flex-1 sm:flex-none px-3 py-2 text-sm font-semibold text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50">İptal</button>
+                                <button onClick={handleSaveChanges} disabled={isSaving} className="flex-1 sm:flex-none px-3 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-400">
+                                    {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                                </button>
+                            </div>
+                        ) : (
+                            <button onClick={() => setIsEditMode(true)} className="px-3 py-2 text-sm font-semibold text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50">
+                                <span className="hidden sm:inline">Bilgileri Düzenle</span>
+                                <span className="sm:hidden">Düzenle</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-                <div className="bg-white dark:bg-zinc-800 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
-                    <div className="flex items-center gap-2 mb-6 border-b border-zinc-200 dark:border-zinc-700 pb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
+                <div className="bg-white dark:bg-zinc-800 p-4 sm:p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 border-b border-zinc-200 dark:border-zinc-700 pb-4">
                         <TabButton active={activeTab === 'genel'} onClick={() => setActiveTab('genel')}>Genel Bilgiler</TabButton>
                         <TabButton active={false} onClick={() => alert('Bu sekme yapım aşamasındadır.')}>Diğer Detaylar</TabButton>
                     </div>
@@ -391,7 +397,7 @@ const KisiDetay: React.FC = () => {
                 <div className="space-y-4">
                     <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
                         <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">Bağlantılı Kayıtlar</h3>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
                            {linkedRecordsConfig.map(item => {
                                 if (item.to) {
                                     return <ReactRouterDOM.Link key={item.label} to={item.to} className="p-3 border border-zinc-300 dark:border-zinc-600 rounded-md text-sm text-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">{item.label}</ReactRouterDOM.Link>

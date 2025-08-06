@@ -51,8 +51,8 @@ const KisiFormModal: React.FC<{
     return (
         <>
             <Modal isOpen={true} onClose={onClose} title={isNew ? 'Yeni Kişi Ekle' : 'Kişi Bilgilerini Düzenle'}>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Ad</label>
                             <input type="text" name="ad" value={formData.ad || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
@@ -69,7 +69,7 @@ const KisiFormModal: React.FC<{
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Cep Telefonu</label>
                             <input type="tel" name="cepTelefonu" value={formData.cepTelefonu || ''} onChange={handleChange} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
                         </div>
-                        <div className="md:col-span-2">
+                        <div className="sm:col-span-2">
                             <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Adres</label>
                             <textarea name="adres" value={formData.adres || ''} onChange={handleChange} rows={2} className="mt-1 block w-full p-2 border border-zinc-300 dark:border-zinc-600 rounded-lg" required />
                         </div>
@@ -82,7 +82,7 @@ const KisiFormModal: React.FC<{
                         </div>
                     </div>
 
-                    <div className="pt-4 flex justify-end space-x-3">
+                    <div className="pt-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                         <button type="button" onClick={onClose} className="bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 px-4 py-2 rounded-lg font-semibold border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600">İptal</button>
                         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">Kaydet</button>
                     </div>

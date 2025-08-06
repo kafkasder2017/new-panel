@@ -352,7 +352,7 @@ const BasvuruFormModal: React.FC<{ basvuru: Partial<YardimBasvurusu>, people: Pe
     return (
         <Modal isOpen={true} onClose={onClose} title={isNew ? 'Yeni Yardım Başvurusu Ekle' : 'Başvuru Bilgilerini Düzenle'}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Kişi</label>
                         <SearchableSelect<Person>
@@ -382,12 +382,12 @@ const BasvuruFormModal: React.FC<{ basvuru: Partial<YardimBasvurusu>, people: Pe
                             {Object.values(BasvuruOncelik).map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Talep Detayı</label>
                         <textarea name="talepDetayi" value={formData.talepDetayi || ''} onChange={handleChange} rows={4} className="mt-1 block w-full border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-sm p-2 bg-zinc-50 dark:bg-zinc-700" placeholder="Başvuranın talebiyle ilgili detayları buraya yazın..." required />
                     </div>
                 </div>
-                <div className="pt-4 flex justify-end space-x-3">
+                <div className="pt-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button type="button" onClick={onClose} className="bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 px-4 py-2 rounded-lg font-semibold border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600">İptal</button>
                     <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">Kaydet</button>
                 </div>
@@ -439,7 +439,7 @@ const EvaluationModal: React.FC<{ basvuru: YardimBasvurusu, onClose: () => void,
                     <textarea name="degerlendirmeNotu" value={formData.degerlendirmeNotu || ''} onChange={handleChange} rows={4} className="mt-1 block w-full border border-zinc-300 dark:border-zinc-600 rounded-md shadow-sm p-2 bg-zinc-50 dark:bg-zinc-700" placeholder="Değerlendirme ile ilgili notlarınızı buraya yazın..."></textarea>
                 </div>
 
-                <div className="pt-4 flex justify-end space-x-3">
+                <div className="pt-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button type="button" onClick={onClose} className="bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 px-4 py-2 rounded-lg font-semibold border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600">İptal</button>
                     <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700">Kaydet</button>
                 </div>
